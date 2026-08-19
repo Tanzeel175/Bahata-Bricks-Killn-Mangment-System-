@@ -3,6 +3,8 @@ Modern Brick Kiln (بھٹہ خشت) ERP & Labour Ledger Management System built 
 
 # Features
 -1-piece-rate production tracking.
+
 -2-automated Khata ledgers.
+
 -3-multi-page A4 PDF/print reporting.
 
