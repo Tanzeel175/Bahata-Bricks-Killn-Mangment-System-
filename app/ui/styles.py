@@ -222,12 +222,12 @@ QTableWidget::item:selected {
 
 QHeaderView::section {
     background-color: #F1F5F9;
-    color: #334155;
-    padding: 6px 12px;
+    color: #1E293B;
+    padding: 6px 10px;
     font-weight: 700;
     font-size: 12px;
-    min-height: 28px;
-    height: 32px;
+    min-height: 40px;
+    height: 40px;
     border: none;
     border-bottom: 2px solid #CBD5E1;
     border-right: 1px solid #E2E8F0;

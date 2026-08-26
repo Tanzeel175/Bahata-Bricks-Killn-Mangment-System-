@@ -124,7 +124,9 @@ class LedgerReportWindow(QDialog):
         for t in d["transactions"]:
             c_str = f"Rs. {t['credit']:,.2f}" if t['credit'] > 0 else "—"
             d_str = f"Rs. {t['debit']:,.2f}" if t['debit'] > 0 else "—"
-            r_str = f"Rs. {t['running_balance']:,.2f}" if t['running_balance'] >= 0 else f"-Rs. {abs(t['running_balance']):,.2f}"
+            r_val = t['running_balance']
+            r_str = f"Rs. {r_val:,.2f}" if r_val >= 0 else f"-Rs. {abs(r_val):,.2f}"
+            r_color = "#15803D" if r_val >= 0 else "#DC2626"
 
             rows_html += f"""
             <tr>
@@ -133,7 +135,7 @@ class LedgerReportWindow(QDialog):
                 <td width="36%" style="padding: 4px 5px; border: 1px solid #CBD5E1; font-size: 8.5pt;">{t['description']}</td>
                 <td width="14%" nowrap style="padding: 4px 5px; border: 1px solid #CBD5E1; font-size: 8.5pt; text-align: right; color: #16A34A; font-weight: bold; white-space: nowrap;">{c_str}</td>
                 <td width="14%" nowrap style="padding: 4px 5px; border: 1px solid #CBD5E1; font-size: 8.5pt; text-align: right; color: #DC2626; font-weight: bold; white-space: nowrap;">{d_str}</td>
-                <td width="16%" nowrap style="padding: 4px 5px; border: 1px solid #CBD5E1; font-size: 8.5pt; text-align: right; font-weight: bold; color: #0F172A; white-space: nowrap;">{r_str}</td>
+                <td width="16%" nowrap style="padding: 4px 5px; border: 1px solid #CBD5E1; font-size: 8.5pt; text-align: right; font-weight: bold; color: {r_color}; white-space: nowrap;">{r_str}</td>
             </tr>
             """
 
@@ -141,22 +143,32 @@ class LedgerReportWindow(QDialog):
             rows_html = """
             <tr>
                 <td colspan="6" style="padding: 12px; text-align: center; color: #64748B; font-style: italic; border: 1px solid #CBD5E1; font-size: 10pt;">
-                    No financial transactions recorded for this labourer during the selected period.
+                    No financial transactions recorded for this account during the selected period.
                 </td>
             </tr>
             """
 
         op_bal = d["opening_balance"]
         op_sign = f"Rs. {op_bal:,.2f}" if op_bal >= 0 else f"-Rs. {abs(op_bal):,.2f}"
+        op_color = "#15803D" if op_bal >= 0 else "#DC2626"
 
         badge_color = "#15803D"
         badge_bg = "#F0FDF4"
         badge_border = "#22C55E"
 
-        if d["statement_status"] == "ADVANCE":
-            badge_color = "#B91C1C"
+        if d["statement_status"] == "RECEIVABLE":
+            badge_color = "#DC2626"
             badge_bg = "#FEF2F2"
             badge_border = "#EF4444"
+        elif d["statement_status"] == "ADVANCE":
+            if w["category"] == "Customer":
+                badge_color = "#15803D"
+                badge_bg = "#F0FDF4"
+                badge_border = "#22C55E"
+            else:
+                badge_color = "#DC2626"
+                badge_bg = "#FEF2F2"
+                badge_border = "#EF4444"
         elif d["statement_status"] == "BALANCED":
             badge_color = "#334155"
             badge_bg = "#F8FAFC"
@@ -257,7 +269,7 @@ class LedgerReportWindow(QDialog):
             </div>
 
             <div class="yellow-badge">
-                LABOUR LEDGER (KHATA) REPORT
+                {'CUSTOMER KHATA LEDGER (گاہک کھاتہ رپورٹ)' if w['category'] == 'Customer' else 'LABOUR LEDGER (KHATA) REPORT (لیبر کھاتہ رپورٹ)'}
             </div>
 
             <table class="info-table">
@@ -269,7 +281,7 @@ class LedgerReportWindow(QDialog):
                     </td>
                     <td style="width: 45%; text-align: right;">
                         <strong>Ledger Period:</strong> {p['from_date']} to {p['to_date']}<br>
-                        <span style="font-weight: bold;">
+                        <span style="font-weight: bold; color: {op_color};">
                             Opening Balance: {op_sign}
                         </span>
                     </td>
@@ -282,8 +294,8 @@ class LedgerReportWindow(QDialog):
                         <th width="11%" nowrap style="padding: 4px 5px; font-size: 9pt; white-space: nowrap;">Date</th>
                         <th width="9%" nowrap style="padding: 4px 5px; font-size: 9pt; white-space: nowrap;">Ref #</th>
                         <th width="36%" nowrap style="padding: 4px 5px; font-size: 9pt; white-space: nowrap;">Transaction Description</th>
-                        <th width="14%" nowrap style="padding: 4px 5px; font-size: 9pt; text-align: right; white-space: nowrap;">Credit</th>
-                        <th width="14%" nowrap style="padding: 4px 5px; font-size: 9pt; text-align: right; white-space: nowrap;">Debit</th>
+                        <th width="14%" nowrap style="padding: 4px 5px; font-size: 9pt; text-align: right; white-space: nowrap;">{'Credit (Recv)' if w['category'] == 'Customer' else 'Credit (Earned)'}</th>
+                        <th width="14%" nowrap style="padding: 4px 5px; font-size: 9pt; text-align: right; white-space: nowrap;">{'Debit (Sales)' if w['category'] == 'Customer' else 'Debit (Paid)'}</th>
                         <th width="16%" nowrap style="padding: 4px 5px; font-size: 9pt; text-align: right; white-space: nowrap;">Running Bal</th>
                     </tr>
                 </thead>
@@ -298,16 +310,16 @@ class LedgerReportWindow(QDialog):
                         <div class="totals-card" style="width: 95%;">
                             <table style="width: 100%; font-size: 10.5pt;">
                                 <tr>
-                                    <td style="color: #16A34A; font-weight: bold; padding: 2px 0;">Total Credit (Earned):</td>
+                                    <td style="color: #16A34A; font-weight: bold; padding: 2px 0;">{'Total Credit (Payments Received):' if w['category'] == 'Customer' else 'Total Credit (Earned):'}</td>
                                     <td style="text-align: right; color: #16A34A; font-weight: bold; padding: 2px 0;">Rs. {d['total_credit']:,.2f}</td>
                                 </tr>
                                 <tr>
-                                    <td style="color: #DC2626; font-weight: bold; padding: 2px 0;">Total Debit (Paid):</td>
+                                    <td style="color: #DC2626; font-weight: bold; padding: 2px 0;">{'Total Debit (Sales Deliveries):' if w['category'] == 'Customer' else 'Total Debit (Paid):'}</td>
                                     <td style="text-align: right; color: #DC2626; font-weight: bold; padding: 2px 0;">Rs. {d['total_debit']:,.2f}</td>
                                 </tr>
                                 <tr style="border-top: 1px solid #CBD5E1;">
                                     <td style="padding-top: 4px; font-weight: 900; font-size: 11pt;">Closing Balance:</td>
-                                    <td style="padding-top: 4px; text-align: right; font-weight: 900; font-size: 11pt;">
+                                    <td style="padding-top: 4px; text-align: right; font-weight: 900; font-size: 11pt; color: {'#16A34A' if d['closing_balance'] >= 0 else '#DC2626'};">
                                         {'Rs. ' + f"{d['closing_balance']:,.2f}" if d['closing_balance'] >= 0 else '-Rs. ' + f"{abs(d['closing_balance']):,.2f}"}
                                     </td>
                                 </tr>

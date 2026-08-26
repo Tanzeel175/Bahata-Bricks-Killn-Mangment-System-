@@ -245,6 +245,7 @@ class SalesHeader(Base):
     InvoiceNo = Column(String(50), unique=True, nullable=False, index=True)
     SaleDate = Column(Date, nullable=False, index=True)
     CustomerID = Column(String(50), ForeignKey("LabourAccounts.WorkerID"), nullable=False, index=True)
+    TransportMode = Column(String(50), nullable=True)
     VehicleNumber = Column(String(50), nullable=True)
     DriverName = Column(String(100), nullable=True)
     Remarks = Column(String(255), nullable=True)

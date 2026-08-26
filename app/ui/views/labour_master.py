@@ -358,6 +358,9 @@ class LabourMasterView(QWidget):
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.setSelectionMode(QTableWidget.SingleSelection)
         self.table.setAlternatingRowColors(True)
+        self.table.setAutoScroll(False)
+        self.table.setVerticalScrollMode(QTableWidget.ScrollPerPixel)
+        self.table.setHorizontalScrollMode(QTableWidget.ScrollPerPixel)
         self.table.setMinimumHeight(240)
         self.table.itemDoubleClicked.connect(self._on_row_double_clicked)
         self.table.itemClicked.connect(self._on_row_clicked)
@@ -422,6 +425,11 @@ class LabourMasterView(QWidget):
             self.table.setItem(row, 6, status_item)
 
             self.table.item(row, 0).setData(Qt.UserRole, a)
+            self.table.setRowHeight(row, 40)
+
+        self.table.clearSelection()
+        self.table.verticalScrollBar().setValue(0)
+        self.table.scrollToTop()
 
     def _on_search_text_changed(self):
         self._execute_search()

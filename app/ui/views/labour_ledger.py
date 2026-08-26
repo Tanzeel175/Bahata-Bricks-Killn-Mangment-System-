@@ -52,9 +52,9 @@ class LabourLedgerView(QWidget):
 
         title_box = QVBoxLayout()
         title_box.setSpacing(4)
-        title = QLabel("📑 Labour & Account Ledger (Khata) Center")
+        title = QLabel("📑 Customer & Labour Khata Ledger (کسٹمر اور لیبر کھاتہ)")
         title.setStyleSheet("font-size: 20px; font-weight: 800; color: #FFFFFF;")
-        subtitle = QLabel("Generate, print, and export professional A4 Khata statements for Pathera, Bahri Wala, and Nakkasi Wala accounts.")
+        subtitle = QLabel("Generate, print, and export professional A4 Khata statements for Customers, Pathera, Bahri Wala, and Nakkasi Wala accounts.")
         subtitle.setStyleSheet("font-size: 13px; color: #93C5FD; font-weight: 500;")
         title_box.addWidget(title)
         title_box.addWidget(subtitle)
@@ -121,7 +121,7 @@ class LabourLedgerView(QWidget):
         col2_layout = QVBoxLayout()
         col2_layout.setSpacing(6)
 
-        lbl_worker = QLabel("Select Labourer / Entity:")
+        lbl_worker = QLabel("Select Account / Customer / Labourer:")
         lbl_worker.setStyleSheet("font-weight: 700; font-size: 12px; color: #334155; border: none; background: transparent;")
         self.cmb_worker = QComboBox()
         self.cmb_worker.setMinimumHeight(38)

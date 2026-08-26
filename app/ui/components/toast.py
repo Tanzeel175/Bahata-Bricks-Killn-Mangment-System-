@@ -37,6 +37,22 @@ class ToastNotification:
         msg.exec()
 
     @staticmethod
+    def success(parent: QWidget, message: str, title: str = "Success"):
+        ToastNotification.show_success(parent, title, message)
+
+    @staticmethod
+    def info(parent: QWidget, message: str, title: str = "Information"):
+        ToastNotification.show_info(parent, title, message)
+
+    @staticmethod
+    def warning(parent: QWidget, message: str, title: str = "Warning"):
+        ToastNotification.show_warning(parent, title, message)
+
+    @staticmethod
+    def error(parent: QWidget, message: str, title: str = "Error"):
+        ToastNotification.show_error(parent, title, message)
+
+    @staticmethod
     def confirm(parent: QWidget, title: str, message: str) -> bool:
         reply = QMessageBox.question(
             parent,

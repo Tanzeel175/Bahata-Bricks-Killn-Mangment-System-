@@ -31,10 +31,29 @@ DEFAULT_ACCOUNT_TYPES = [
 ]
 
 
+def _migrate_schema(engine):
+    """Safely adds missing columns to existing SQLite tables if schema has evolved."""
+    try:
+        with engine.connect() as conn:
+            cursor = conn.exec_driver_sql("PRAGMA table_info(SalesHeader);")
+            columns = [row[1] for row in cursor.fetchall()]
+            if columns:
+                if "TransportMode" not in columns:
+                    conn.exec_driver_sql("ALTER TABLE SalesHeader ADD COLUMN TransportMode VARCHAR(50);")
+                if "VehicleNumber" not in columns:
+                    conn.exec_driver_sql("ALTER TABLE SalesHeader ADD COLUMN VehicleNumber VARCHAR(50);")
+                if "DriverName" not in columns:
+                    conn.exec_driver_sql("ALTER TABLE SalesHeader ADD COLUMN DriverName VARCHAR(100);")
+            conn.commit()
+    except Exception as e:
+        logger.warning(f"Schema migration warning: {e}")
+
+
 def init_db():
     """Create tables if they don't exist and seed initial data."""
     engine = get_engine()
     Base.metadata.create_all(bind=engine)
+    _migrate_schema(engine)
 
     with get_db_session() as session:
         # Seed Roles

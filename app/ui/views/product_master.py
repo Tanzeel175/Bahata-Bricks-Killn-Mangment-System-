@@ -353,6 +353,11 @@ class ProductMasterView(QWidget):
             self.table.setItem(row, 7, QTableWidgetItem(p["CreatedDate"]))
 
             self.table.item(row, 0).setData(Qt.UserRole, p)
+            self.table.setRowHeight(row, 40)
+
+        self.table.clearSelection()
+        self.table.verticalScrollBar().setValue(0)
+        self.table.scrollToTop()
 
     def _on_search_text_changed(self):
         self._execute_search()

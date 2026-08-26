@@ -431,6 +431,7 @@ class ProductionEntryView(QWidget):
                 item_qty = QTableWidgetItem("0")
                 item_qty.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
                 self.prod_table.setItem(row, 2 + c, item_qty)
+            self.prod_table.setRowHeight(row, 40)
 
         category_label_title = self.cmb_account_type.currentText()
         self.lbl_grid_title.setText(f"📋 Active Labourers ({category_label_title}) & Production Quantities")
@@ -448,6 +449,11 @@ class ProductionEntryView(QWidget):
             self.history_table.setItem(row, 4, QTableWidgetItem(e["CreatedBy"]))
 
             self.history_table.item(row, 0).setData(Qt.UserRole, e)
+            self.history_table.setRowHeight(row, 40)
+
+        self.history_table.clearSelection()
+        self.history_table.verticalScrollBar().setValue(0)
+        self.history_table.scrollToTop()
 
     def _clear_form(self):
         self._ignore_signals = True

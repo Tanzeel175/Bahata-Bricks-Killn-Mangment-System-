@@ -2,7 +2,7 @@ from datetime import date, datetime
 from typing import List, Dict, Any, Optional, Tuple
 from app.config import COMPANY_NAME, APP_SUBTITLE
 from app.database.connection import get_db_session
-from app.database.schema import LabourAccount, AccountType, ProductionDetail, ProductionHeader, Product, LabourRate
+from app.database.schema import LabourAccount, AccountType, ProductionDetail, ProductionHeader, Product, LabourRate, SalesHeader, SalesDetail
 from app.repositories.labour_repository import LabourRepository
 from app.repositories.payment_repository import PaymentRepository
 from app.repositories.audit_repository import AuditRepository
@@ -13,10 +13,10 @@ class LedgerService:
     """
     Unified Calculated Ledger Engine.
     Dynamically computes opening balance, period transactions, running balance,
-    totals, and closing balance statements across Production and Payments.
+    totals, and closing balance statements across Labour Production, Customer Sales, and Payments.
     """
 
-    SUPPORTED_CATEGORIES = ["Pathera", "Bahri Wala", "Nakkasi Wala"]
+    SUPPORTED_CATEGORIES = ["Customer", "Pathera", "Bahri Wala", "Nakkasi Wala", "Jamadar"]
 
     @classmethod
     def get_supported_categories(cls) -> List[str]:
@@ -55,105 +55,205 @@ class LedgerService:
                 return None
 
             account_type_name = worker.account_type.AccountTypeName if worker.account_type else "Unknown"
-
-            # 1. Fetch Production Detail Transactions for this worker
-            details = (
-                session.query(ProductionDetail)
-                .join(ProductionHeader, ProductionDetail.ProductionID == ProductionHeader.ProductionID)
-                .join(Product, ProductionDetail.ProductID == Product.ProductID)
-                .filter(ProductionDetail.WorkerID == worker_id)
-                .all()
-            )
-
-            # Pre-cache worker rates
-            rates_query = session.query(LabourRate).filter_by(WorkerID=worker_id).all()
-            rates_map = {r.ProductID: r.RatePer1000 for r in rates_query}
+            is_customer = (account_type_name == "Customer")
 
             all_txns = []
 
-            for d in details:
-                p_date = d.header.EntryDate
-                rate = rates_map.get(d.ProductID, d.product.UnitRate or 0.0)
-                credit = (d.Quantity / 1000.0) * rate
-                prod_name = d.product.ProductName if d.product else f"Product #{d.ProductID}"
-                display_prod = prod_name
-                if display_prod in ["Awal", "Doam", "Khinger"]:
-                    display_prod = f"{display_prod} Bricks"
+            if is_customer:
+                # 1. Fetch Sales Details for this Customer
+                sales_details = (
+                    session.query(SalesDetail)
+                    .join(SalesHeader, SalesDetail.SaleID == SalesHeader.SaleID)
+                    .join(Product, SalesDetail.ProductID == Product.ProductID)
+                    .filter(SalesHeader.CustomerID == worker_id)
+                    .all()
+                )
 
-                all_txns.append({
-                    "date": p_date,
-                    "type": "PRODUCTION",
-                    "ref": f"PRD-{d.ProductionID:04d}",
-                    "description": f"{display_prod} ({d.Quantity:,.0f} @ Rs. {rate:,.2f}/1000)",
-                    "credit": credit,
-                    "debit": 0.0,
-                    "raw_id": d.ProductionID
-                })
+                for d in sales_details:
+                    s_date = d.header.SaleDate
+                    prod_name = d.product.ProductName if d.product else f"Product #{d.ProductID}"
+                    t_mode = d.header.TransportMode or ""
+                    d_name = d.header.DriverName or ""
+                    trans_str = ""
+                    if t_mode:
+                        trans_str = f" via {t_mode}"
+                    if d_name:
+                        trans_str += f" ({d_name})"
 
-            # 2. Fetch Payment Transactions for this worker
-            payment_repo = PaymentRepository(session)
-            payments = payment_repo.get_by_worker(worker_id)
+                    desc = f"{prod_name} ({d.Quantity:,.0f} @ Rs. {d.RatePer1000:,.2f}/1000){trans_str}"
 
-            for p in payments:
-                desc = p.PaymentType
-                if p.Remarks and p.Remarks.strip():
-                    desc += f" - {p.Remarks.strip()}"
+                    all_txns.append({
+                        "date": s_date,
+                        "type": "SALE",
+                        "ref": d.header.InvoiceNo,
+                        "description": desc,
+                        "debit": d.TotalAmount,  # Receivable from customer
+                        "credit": 0.0,
+                        "raw_id": d.SaleID
+                    })
 
-                all_txns.append({
-                    "date": p.PaymentDate,
-                    "type": "PAYMENT",
-                    "ref": f"PAY-{p.PaymentID:04d}",
-                    "description": desc,
-                    "credit": 0.0,
-                    "debit": p.Amount,
-                    "raw_id": p.PaymentID
-                })
+                # 2. Fetch Payments received from Customer
+                payment_repo = PaymentRepository(session)
+                payments = payment_repo.get_by_worker(worker_id)
 
-            # 3. Calculate Opening Balance (Transactions prior to from_date)
-            prior_txns = [t for t in all_txns if t["date"] < from_date]
-            opening_credit = sum(t["credit"] for t in prior_txns)
-            opening_debit = sum(t["debit"] for t in prior_txns)
-            opening_balance = opening_credit - opening_debit
+                for p in payments:
+                    desc = f"Payment Received: {p.PaymentType}"
+                    if p.Remarks and p.Remarks.strip():
+                        desc += f" - {p.Remarks.strip()}"
 
-            # 4. Period Transactions (from_date <= date <= to_date)
-            period_txns = [t for t in all_txns if from_date <= t["date"] <= to_date]
-            period_txns.sort(key=lambda x: (x["date"], 0 if x["type"] == "PRODUCTION" else 1, x["ref"]))
+                    all_txns.append({
+                        "date": p.PaymentDate,
+                        "type": "PAYMENT",
+                        "ref": f"PAY-{p.PaymentID:04d}",
+                        "description": desc,
+                        "credit": p.Amount,  # Customer paid money
+                        "debit": 0.0,
+                        "raw_id": p.PaymentID
+                    })
 
-            current_running = opening_balance
-            processed_period_txns = []
+                # Customer Opening Balance: Credits (Payments) - Debits (Sales)
+                prior_txns = [t for t in all_txns if t["date"] < from_date]
+                opening_credit = sum(t["credit"] for t in prior_txns)
+                opening_debit = sum(t["debit"] for t in prior_txns)
+                opening_balance = opening_credit - opening_debit
 
-            total_credit = 0.0
-            total_debit = 0.0
+                # Period Transactions
+                period_txns = [t for t in all_txns if from_date <= t["date"] <= to_date]
+                period_txns.sort(key=lambda x: (x["date"], 0 if x["type"] == "SALE" else 1, x["ref"]))
 
-            for t in period_txns:
-                credit = t["credit"]
-                debit = t["debit"]
-                current_running += (credit - debit)
-                total_credit += credit
-                total_debit += debit
+                current_running = opening_balance
+                processed_period_txns = []
+                total_credit = 0.0
+                total_debit = 0.0
 
-                processed_period_txns.append({
-                    "date_str": t["date"].strftime("%d-%b-%Y"),
-                    "ref": t["ref"],
-                    "description": t["description"],
-                    "credit": credit,
-                    "debit": debit,
-                    "running_balance": current_running,
-                    "raw_id": t["raw_id"],
-                    "type": t["type"]
-                })
+                for t in period_txns:
+                    credit = t["credit"]
+                    debit = t["debit"]
+                    current_running += (credit - debit)
+                    total_credit += credit
+                    total_debit += debit
 
-            closing_balance = opening_balance + total_credit - total_debit
+                    processed_period_txns.append({
+                        "date_str": t["date"].strftime("%d-%b-%Y"),
+                        "ref": t["ref"],
+                        "description": t["description"],
+                        "credit": credit,
+                        "debit": debit,
+                        "running_balance": current_running,
+                        "raw_id": t["raw_id"],
+                        "type": t["type"]
+                    })
 
-            if closing_balance > 0:
-                statement_label = f"AMOUNT PAYABLE TO LABOUR: Rs. {closing_balance:,.2f}"
-                statement_status = "PAYABLE"
-            elif closing_balance < 0:
-                statement_label = f"ADVANCE / DEBIT BALANCE: Rs. {abs(closing_balance):,.2f}"
-                statement_status = "ADVANCE"
+                closing_balance = opening_balance + total_credit - total_debit
+
+                if closing_balance < 0:
+                    statement_label = f"AMOUNT RECEIVABLE FROM CUSTOMER (BAQI): -Rs. {abs(closing_balance):,.2f}"
+                    statement_status = "RECEIVABLE"
+                elif closing_balance > 0:
+                    statement_label = f"ADVANCE MONEY RECEIVED FROM CUSTOMER: Rs. {closing_balance:,.2f}"
+                    statement_status = "ADVANCE"
+                else:
+                    statement_label = "NIL / ZERO BALANCE: Rs. 0.00"
+                    statement_status = "BALANCED"
+
             else:
-                statement_label = "NIL / ZERO BALANCE: Rs. 0.00"
-                statement_status = "BALANCED"
+                # --- LABOURER LEDGER LOGIC ---
+                # 1. Fetch Production Detail Transactions for this worker
+                details = (
+                    session.query(ProductionDetail)
+                    .join(ProductionHeader, ProductionDetail.ProductionID == ProductionHeader.ProductionID)
+                    .join(Product, ProductionDetail.ProductID == Product.ProductID)
+                    .filter(ProductionDetail.WorkerID == worker_id)
+                    .all()
+                )
+
+                # Pre-cache worker rates
+                rates_query = session.query(LabourRate).filter_by(WorkerID=worker_id).all()
+                rates_map = {r.ProductID: r.RatePer1000 for r in rates_query}
+
+                for d in details:
+                    p_date = d.header.EntryDate
+                    rate = rates_map.get(d.ProductID, d.product.UnitRate or 0.0)
+                    credit = (d.Quantity / 1000.0) * rate
+                    prod_name = d.product.ProductName if d.product else f"Product #{d.ProductID}"
+                    display_prod = prod_name
+                    if display_prod in ["Awal", "Doam", "Khinger"]:
+                        display_prod = f"{display_prod} Bricks"
+
+                    all_txns.append({
+                        "date": p_date,
+                        "type": "PRODUCTION",
+                        "ref": f"PRD-{d.ProductionID:04d}",
+                        "description": f"{display_prod} ({d.Quantity:,.0f} @ Rs. {rate:,.2f}/1000)",
+                        "credit": credit,
+                        "debit": 0.0,
+                        "raw_id": d.ProductionID
+                    })
+
+                # 2. Fetch Payment Transactions for this worker
+                payment_repo = PaymentRepository(session)
+                payments = payment_repo.get_by_worker(worker_id)
+
+                for p in payments:
+                    desc = p.PaymentType
+                    if p.Remarks and p.Remarks.strip():
+                        desc += f" - {p.Remarks.strip()}"
+
+                    all_txns.append({
+                        "date": p.PaymentDate,
+                        "type": "PAYMENT",
+                        "ref": f"PAY-{p.PaymentID:04d}",
+                        "description": desc,
+                        "credit": 0.0,
+                        "debit": p.Amount,
+                        "raw_id": p.PaymentID
+                    })
+
+                # 3. Calculate Opening Balance (Transactions prior to from_date)
+                prior_txns = [t for t in all_txns if t["date"] < from_date]
+                opening_credit = sum(t["credit"] for t in prior_txns)
+                opening_debit = sum(t["debit"] for t in prior_txns)
+                opening_balance = opening_credit - opening_debit
+
+                # 4. Period Transactions (from_date <= date <= to_date)
+                period_txns = [t for t in all_txns if from_date <= t["date"] <= to_date]
+                period_txns.sort(key=lambda x: (x["date"], 0 if x["type"] == "PRODUCTION" else 1, x["ref"]))
+
+                current_running = opening_balance
+                processed_period_txns = []
+
+                total_credit = 0.0
+                total_debit = 0.0
+
+                for t in period_txns:
+                    credit = t["credit"]
+                    debit = t["debit"]
+                    current_running += (credit - debit)
+                    total_credit += credit
+                    total_debit += debit
+
+                    processed_period_txns.append({
+                        "date_str": t["date"].strftime("%d-%b-%Y"),
+                        "ref": t["ref"],
+                        "description": t["description"],
+                        "credit": credit,
+                        "debit": debit,
+                        "running_balance": current_running,
+                        "raw_id": t["raw_id"],
+                        "type": t["type"]
+                    })
+
+                closing_balance = opening_balance + total_credit - total_debit
+
+                if closing_balance > 0:
+                    statement_label = f"AMOUNT PAYABLE TO LABOUR: Rs. {closing_balance:,.2f}"
+                    statement_status = "PAYABLE"
+                elif closing_balance < 0:
+                    statement_label = f"ADVANCE / DEBIT BALANCE: Rs. {abs(closing_balance):,.2f}"
+                    statement_status = "ADVANCE"
+                else:
+                    statement_label = "NIL / ZERO BALANCE: Rs. 0.00"
+                    statement_status = "BALANCED"
 
             # Retrieve owner contact details from current user session or defaults
             company_info = {

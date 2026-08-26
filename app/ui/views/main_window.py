@@ -20,6 +20,7 @@ from app.ui.views.audit_logs import AuditLogsView
 from app.ui.views.product_master import ProductMasterView
 from app.ui.views.production_entry import ProductionEntryView
 from app.ui.views.labour_rate import LabourRateView
+from app.ui.views.sales_entry import SalesEntryView
 
 
 class SidebarNav(QFrame):
@@ -86,6 +87,15 @@ class SidebarNav(QFrame):
         self.btn_production_nav.clicked.connect(self.main_win.open_production_entry_tab)
         layout.addWidget(self.btn_production_nav)
 
+        self.btn_sales_nav = QPushButton("🧾 Sales Entry & Billing")
+        self.btn_sales_nav.setMinimumHeight(38)
+        self.btn_sales_nav.setStyleSheet(
+            "QPushButton { background-color: #0284C7; color: #FFFFFF; font-weight: 700; font-size: 13px; border-radius: 19px; text-align: left; padding-left: 16px; border: none; } "
+            "QPushButton:hover { background-color: #0369A1; }"
+        )
+        self.btn_sales_nav.clicked.connect(self.main_win.open_sales_entry_tab)
+        layout.addWidget(self.btn_sales_nav)
+
         self.btn_rate_nav = QPushButton("Labour Rates")
         self.btn_rate_nav.setMinimumHeight(38)
         self.btn_rate_nav.setStyleSheet(
@@ -95,7 +105,7 @@ class SidebarNav(QFrame):
         self.btn_rate_nav.clicked.connect(self.main_win.open_labour_rate_tab)
         layout.addWidget(self.btn_rate_nav)
 
-        self.btn_ledger_nav = QPushButton("📑 Labour Khata Ledger")
+        self.btn_ledger_nav = QPushButton("📑 Customer & Labour Khata")
         self.btn_ledger_nav.setMinimumHeight(38)
         self.btn_ledger_nav.setStyleSheet(
             "QPushButton { background-color: #0284C7; color: #FFFFFF; font-weight: 700; font-size: 13px; border-radius: 19px; text-align: left; padding-left: 16px; border: none; } "
@@ -524,6 +534,17 @@ class MainWindow(QMainWindow):
         self.tab_widget.addTab(view, "🛠️ Daily Production Entry")
         self.tab_widget.setCurrentWidget(view)
 
+    def open_sales_entry_tab(self):
+        for idx in range(self.tab_widget.count()):
+            if isinstance(self.tab_widget.widget(idx), SalesEntryView):
+                self.tab_widget.widget(idx).refresh_data()
+                self.tab_widget.setCurrentIndex(idx)
+                return
+        view = SalesEntryView()
+        view.close_requested.connect(self.open_dashboard_tab)
+        self.tab_widget.addTab(view, "🧾 Sales Entry & Billing")
+        self.tab_widget.setCurrentWidget(view)
+
     def open_labour_rate_tab(self):
         for idx in range(self.tab_widget.count()):
             if isinstance(self.tab_widget.widget(idx), LabourRateView):
@@ -543,7 +564,7 @@ class MainWindow(QMainWindow):
                 return
         view = LabourLedgerView()
         view.close_requested.connect(self.open_dashboard_tab)
-        self.tab_widget.addTab(view, "📑 Labour Khata Ledger")
+        self.tab_widget.addTab(view, "📑 Customer & Labour Khata")
         self.tab_widget.setCurrentWidget(view)
 
     def _on_tab_current_changed(self, new_index: int):
