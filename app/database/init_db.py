@@ -2,7 +2,8 @@ import logging
 from datetime import datetime, date
 from app.database.schema import (
     Base, Role, User, AccountType, ProductCategory, Product, ProductCategoryMapping,
-    LabourAccount, LabourRate, ProductionHeader, ProductionDetail, LabourPayment
+    LabourAccount, LabourRate, ProductionHeader, ProductionDetail, LabourPayment,
+    MoneyTransaction
 )
 from app.database.connection import get_engine, get_db_session
 from app.security.hashing import hash_password
@@ -277,6 +278,85 @@ def seed_dummy_data(session):
             pay1 = LabourPayment(WorkerID="WRK-0001", PaymentDate=date(2026, 7, 30), PaymentType="Cash Payment", Amount=5000.0, Remarks="Weekly Cash Advance", CreatedBy="admin")
             pay2 = LabourPayment(WorkerID="WRK-0002", PaymentDate=date(2026, 7, 31), PaymentType="Advance Payment", Amount=4000.0, Remarks="Emergency Medical Advance", CreatedBy="admin")
             session.add_all([pay1, pay2])
+
+    # 6. Seed Sample Unified Money Transactions (Amdan & Akrajat)
+    if not session.query(MoneyTransaction).first():
+        sample_txns = [
+            # Amdan: Customer Deposits for brick purchase
+            MoneyTransaction(
+                TransactionNo="RCT-000001",
+                TransactionType="RECEIPT",
+                TransactionDate=date(2026, 7, 25),
+                AccountID="CUST-0001",
+                PaymentMethod="Cash",
+                Amount=100000.0,
+                Description="Advance deposit for commercial project brick supply",
+                ReferenceType="Customer Advance",
+                CreatedBy="admin"
+            ),
+            # Amdan: Customer 2 deposit via Bank Transfer
+            MoneyTransaction(
+                TransactionNo="RCT-000002",
+                TransactionType="RECEIPT",
+                TransactionDate=date(2026, 7, 26),
+                AccountID="CUST-0002",
+                PaymentMethod="Bank",
+                BankAccount="HBL - 1234567890",
+                Amount=75000.0,
+                Description="Advance payment via online bank transfer",
+                ReferenceType="Online Deposit",
+                CreatedBy="admin"
+            ),
+            # Amdan: Pathera Worker repayment of seasonal debt
+            MoneyTransaction(
+                TransactionNo="RCT-000003",
+                TransactionType="RECEIPT",
+                TransactionDate=date(2026, 8, 2),
+                AccountID="WRK-0001",
+                PaymentMethod="Cash",
+                Amount=2000.0,
+                Description="Debt repayment from previous season balance",
+                ReferenceType="Advance Recovery",
+                CreatedBy="admin"
+            ),
+            # Akrajat: Weekly cash advance to labourer WRK-0001
+            MoneyTransaction(
+                TransactionNo="PAY-000001",
+                TransactionType="PAYMENT",
+                TransactionDate=date(2026, 7, 30),
+                AccountID="WRK-0001",
+                PaymentMethod="Cash",
+                Amount=5000.0,
+                Description="Weekly Cash Advance for molding work",
+                ReferenceType="Labour Advance",
+                CreatedBy="admin"
+            ),
+            # Akrajat: Emergency advance to labourer WRK-0002
+            MoneyTransaction(
+                TransactionNo="PAY-000002",
+                TransactionType="PAYMENT",
+                TransactionDate=date(2026, 7, 31),
+                AccountID="WRK-0002",
+                PaymentMethod="Cash",
+                Amount=4000.0,
+                Description="Emergency Medical Advance",
+                ReferenceType="Emergency Advance",
+                CreatedBy="admin"
+            ),
+            # Akrajat: Customer refund
+            MoneyTransaction(
+                TransactionNo="PAY-000003",
+                TransactionType="PAYMENT",
+                TransactionDate=date(2026, 8, 3),
+                AccountID="CUST-0002",
+                PaymentMethod="Cash",
+                Amount=3000.0,
+                Description="Refund to customer for order quantity adjustment",
+                ReferenceType="Customer Refund",
+                CreatedBy="admin"
+            )
+        ]
+        session.add_all(sample_txns)
 
     session.flush()
 

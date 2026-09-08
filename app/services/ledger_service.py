@@ -2,9 +2,13 @@ from datetime import date, datetime
 from typing import List, Dict, Any, Optional, Tuple
 from app.config import COMPANY_NAME, APP_SUBTITLE
 from app.database.connection import get_db_session
-from app.database.schema import LabourAccount, AccountType, ProductionDetail, ProductionHeader, Product, LabourRate, SalesHeader, SalesDetail
+from app.database.schema import (
+    LabourAccount, AccountType, ProductionDetail, ProductionHeader, Product,
+    LabourRate, SalesHeader, SalesDetail, LabourPayment, MoneyTransaction
+)
 from app.repositories.labour_repository import LabourRepository
 from app.repositories.payment_repository import PaymentRepository
+from app.repositories.transaction_repository import TransactionRepository
 from app.repositories.audit_repository import AuditRepository
 from app.security.session import current_session
 
@@ -13,10 +17,16 @@ class LedgerService:
     """
     Unified Calculated Ledger Engine.
     Dynamically computes opening balance, period transactions, running balance,
-    totals, and closing balance statements across Labour Production, Customer Sales, and Payments.
+    totals, and closing balance statements across Labour Production, Customer Sales,
+    and unified Money Transactions (Amdan & Akrajat).
     """
 
-    SUPPORTED_CATEGORIES = ["Customer", "Pathera", "Bahri Wala", "Nakkasi Wala", "Jamadar"]
+    SUPPORTED_CATEGORIES = [
+        "Customer", "Pathera", "Bahri Wala", "Nakkasi Wala", "Jamadar",
+        "Pathera Jamadar", "Nakkasi Jamadar", "Purchase Party", "Owner",
+        "Transporter", "Driver", "Worker", "Salesman", "Mutfariq Expenses",
+        "Mutfariq Income", "Cashier", "Fixed Assets", "Others"
+    ]
 
     @classmethod
     def get_supported_categories(cls) -> List[str]:
@@ -92,11 +102,51 @@ class LedgerService:
                         "raw_id": d.SaleID
                     })
 
-                # 2. Fetch Payments received from Customer
+                # 2. Fetch MoneyTransactions (Amdan & Akrajat) for this Customer
+                txn_repo = TransactionRepository(session)
+                money_txns = txn_repo.get_by_account(worker_id, include_deleted=False)
+                seen_payment_ids = set()
+
+                for mt in money_txns:
+                    if mt.ReferenceType == "LabourPayment" and mt.ReferenceID and mt.ReferenceID.isdigit():
+                        seen_payment_ids.add(int(mt.ReferenceID))
+
+                    if mt.TransactionType == "RECEIPT":
+                        # Amdan: Customer deposited cash/bank payment -> Credit to Customer
+                        desc = f"Amdan / Receipt (آمدن): {mt.PaymentMethod}"
+                        if mt.Description:
+                            desc += f" - {mt.Description}"
+                        all_txns.append({
+                            "date": mt.TransactionDate,
+                            "type": "RECEIPT",
+                            "ref": mt.TransactionNo,
+                            "description": desc,
+                            "credit": mt.Amount,
+                            "debit": 0.0,
+                            "raw_id": mt.TransactionID
+                        })
+                    else:
+                        # Akrajat: Customer refund or return payment -> Debit to Customer
+                        desc = f"Akrajat / Payment (اخراجات): {mt.PaymentMethod}"
+                        if mt.Description:
+                            desc += f" - {mt.Description}"
+                        all_txns.append({
+                            "date": mt.TransactionDate,
+                            "type": "PAYMENT",
+                            "ref": mt.TransactionNo,
+                            "description": desc,
+                            "credit": 0.0,
+                            "debit": mt.Amount,
+                            "raw_id": mt.TransactionID
+                        })
+
+                # 3. Fetch legacy Payments received from Customer (excluding already migrated/synced)
                 payment_repo = PaymentRepository(session)
                 payments = payment_repo.get_by_worker(worker_id)
 
                 for p in payments:
+                    if p.PaymentID in seen_payment_ids:
+                        continue
                     desc = f"Payment Received: {p.PaymentType}"
                     if p.Remarks and p.Remarks.strip():
                         desc += f" - {p.Remarks.strip()}"
@@ -190,11 +240,51 @@ class LedgerService:
                         "raw_id": d.ProductionID
                     })
 
-                # 2. Fetch Payment Transactions for this worker
+                # 2. Fetch MoneyTransactions (Amdan & Akrajat) for this worker
+                txn_repo = TransactionRepository(session)
+                money_txns = txn_repo.get_by_account(worker_id, include_deleted=False)
+                seen_payment_ids = set()
+
+                for mt in money_txns:
+                    if mt.ReferenceType == "LabourPayment" and mt.ReferenceID and mt.ReferenceID.isdigit():
+                        seen_payment_ids.add(int(mt.ReferenceID))
+
+                    if mt.TransactionType == "PAYMENT":
+                        # Akrajat: Payment or advance given to worker -> Debit (increases advance / drawings)
+                        desc = f"Akrajat / Payment (اخراجات): {mt.PaymentMethod}"
+                        if mt.Description:
+                            desc += f" - {mt.Description}"
+                        all_txns.append({
+                            "date": mt.TransactionDate,
+                            "type": "PAYMENT",
+                            "ref": mt.TransactionNo,
+                            "description": desc,
+                            "credit": 0.0,
+                            "debit": mt.Amount,
+                            "raw_id": mt.TransactionID
+                        })
+                    else:
+                        # Amdan: Worker returned advance or repaid debt -> Credit (reduces debt)
+                        desc = f"Amdan / Receipt (آمدن): {mt.PaymentMethod}"
+                        if mt.Description:
+                            desc += f" - {mt.Description}"
+                        all_txns.append({
+                            "date": mt.TransactionDate,
+                            "type": "RECEIPT",
+                            "ref": mt.TransactionNo,
+                            "description": desc,
+                            "credit": mt.Amount,
+                            "debit": 0.0,
+                            "raw_id": mt.TransactionID
+                        })
+
+                # 3. Fetch legacy Payment Transactions for this worker (excluding synced)
                 payment_repo = PaymentRepository(session)
                 payments = payment_repo.get_by_worker(worker_id)
 
                 for p in payments:
+                    if p.PaymentID in seen_payment_ids:
+                        continue
                     desc = p.PaymentType
                     if p.Remarks and p.Remarks.strip():
                         desc += f" - {p.Remarks.strip()}"
@@ -319,11 +409,28 @@ class LedgerService:
                     created_by=user_name
                 )
 
+                # Synchronize to unified MoneyTransactions table
+                txn_repo = TransactionRepository(session)
+                txn_no = txn_repo.get_next_transaction_no("PAYMENT")
+                method_name = "Cash" if "cash" in (payment_type or "").lower() else "Bank"
+                txn_repo.create_transaction(
+                    txn_no=txn_no,
+                    txn_type="PAYMENT",
+                    txn_date=payment_date,
+                    account_id=worker_id,
+                    amount=amount,
+                    description=remarks or f"Labour payment: {payment_type}",
+                    payment_method=method_name,
+                    reference_type="LabourPayment",
+                    reference_id=str(payment.PaymentID),
+                    user_name=user_name
+                )
+
                 audit_repo.log_event(
                     action="PAYMENT_CREATE",
                     username=user_name,
                     user_id=current_session.user_id,
-                    details=f"PAYMENT_CREATE: PaymentID={payment.PaymentID}, WorkerID='{worker_id}', Amount={amount:,.2f}"
+                    details=f"PAYMENT_CREATE: PaymentID={payment.PaymentID}, TransactionNo={txn_no}, WorkerID='{worker_id}', Amount={amount:,.2f}"
                 )
 
                 session.commit()

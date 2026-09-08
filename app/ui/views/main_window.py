@@ -21,6 +21,7 @@ from app.ui.views.product_master import ProductMasterView
 from app.ui.views.production_entry import ProductionEntryView
 from app.ui.views.labour_rate import LabourRateView
 from app.ui.views.sales_entry import SalesEntryView
+from app.ui.views.money_transactions import MoneyTransactionsView
 
 
 class SidebarNav(QFrame):
@@ -113,6 +114,15 @@ class SidebarNav(QFrame):
         )
         self.btn_ledger_nav.clicked.connect(self.main_win.open_labour_ledger_tab)
         layout.addWidget(self.btn_ledger_nav)
+
+        self.btn_cash_nav = QPushButton("💰 Cash & Amdan / Akrajat")
+        self.btn_cash_nav.setMinimumHeight(38)
+        self.btn_cash_nav.setStyleSheet(
+            "QPushButton { background-color: #0284C7; color: #FFFFFF; font-weight: 700; font-size: 13px; border-radius: 19px; text-align: left; padding-left: 16px; border: none; } "
+            "QPushButton:hover { background-color: #0369A1; }"
+        )
+        self.btn_cash_nav.clicked.connect(self.main_win.open_money_transactions_tab)
+        layout.addWidget(self.btn_cash_nav)
 
         # Section 3: SECURITY & AUDIT
         lbl_sec2 = QLabel("SECURITY & AUDIT")
@@ -263,6 +273,12 @@ class DashboardWidget(QWidget):
         if self.main_win:
             btn_go_labour.clicked.connect(self.main_win.open_labour_master_tab)
         qa_layout.addWidget(btn_go_labour)
+
+        btn_go_cash = QPushButton("💰 Amdan & Akrajat")
+        btn_go_cash.setMinimumHeight(36)
+        if self.main_win:
+            btn_go_cash.clicked.connect(self.main_win.open_money_transactions_tab)
+        qa_layout.addWidget(btn_go_cash)
 
         if current_session.is_admin:
             btn_go_users = QPushButton("👤 User Management")
@@ -418,6 +434,10 @@ class MainWindow(QMainWindow):
         act_product.triggered.connect(self.open_product_master_tab)
         menu_modules.addAction(act_product)
 
+        act_cash = QAction("💰 Cash Transactions (Amdan & Akrajat)", self)
+        act_cash.triggered.connect(self.open_money_transactions_tab)
+        menu_modules.addAction(act_cash)
+
         # User Management Menu (Admin only)
         if current_session.is_admin:
             act_users = QAction("👤 User Management", self)
@@ -565,6 +585,17 @@ class MainWindow(QMainWindow):
         view = LabourLedgerView()
         view.close_requested.connect(self.open_dashboard_tab)
         self.tab_widget.addTab(view, "📑 Customer & Labour Khata")
+        self.tab_widget.setCurrentWidget(view)
+
+    def open_money_transactions_tab(self):
+        for idx in range(self.tab_widget.count()):
+            if isinstance(self.tab_widget.widget(idx), MoneyTransactionsView):
+                self.tab_widget.widget(idx).refresh_all_data()
+                self.tab_widget.setCurrentIndex(idx)
+                return
+        view = MoneyTransactionsView()
+        view.close_requested.connect(self.open_dashboard_tab)
+        self.tab_widget.addTab(view, "💰 Cash & Amdan / Akrajat")
         self.tab_widget.setCurrentWidget(view)
 
     def _on_tab_current_changed(self, new_index: int):

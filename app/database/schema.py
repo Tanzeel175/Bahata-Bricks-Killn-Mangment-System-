@@ -341,3 +341,31 @@ class LabourPayment(Base):
     def __repr__(self):
         return f"<LabourPayment(ID={self.PaymentID}, Worker='{self.WorkerID}', Date={self.PaymentDate}, Amount={self.Amount})>"
 
+
+class MoneyTransaction(Base):
+    __tablename__ = "MoneyTransactions"
+
+    TransactionID = Column(Integer, primary_key=True, autoincrement=True)
+    TransactionNo = Column(String(50), unique=True, nullable=False, index=True)
+    TransactionType = Column(String(20), nullable=False, index=True)  # 'RECEIPT' or 'PAYMENT'
+    TransactionDate = Column(Date, nullable=False, index=True)
+    AccountID = Column(String(50), ForeignKey("LabourAccounts.WorkerID", ondelete="CASCADE"), nullable=False, index=True)
+    PaymentMethod = Column(String(50), default="Cash", nullable=False)
+    BankAccount = Column(String(100), nullable=True)
+    ChequeNumber = Column(String(100), nullable=True)
+    Amount = Column(Float, default=0.0, nullable=False)
+    Description = Column(String(255), nullable=False)
+    ReferenceType = Column(String(50), nullable=True)
+    ReferenceID = Column(String(50), nullable=True)
+    IsDeleted = Column(Boolean, default=False, nullable=False, index=True)
+
+    CreatedBy = Column(String(50), nullable=True)
+    CreatedDate = Column(DateTime, default=datetime.utcnow, nullable=False)
+    ModifiedBy = Column(String(50), nullable=True)
+    ModifiedDate = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    account = relationship("LabourAccount")
+
+    def __repr__(self):
+        return f"<MoneyTransaction(ID={self.TransactionID}, No='{self.TransactionNo}', Type='{self.TransactionType}', Account='{self.AccountID}', Amount={self.Amount})>"
+
