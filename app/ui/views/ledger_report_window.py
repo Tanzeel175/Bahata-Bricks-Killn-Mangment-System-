@@ -130,19 +130,19 @@ class LedgerReportWindow(QDialog):
 
             rows_html += f"""
             <tr>
-                <td width="11%" nowrap style="padding: 4px 5px; border: 1px solid #CBD5E1; font-size: 8.5pt; white-space: nowrap;">{t['date_str']}</td>
-                <td width="9%" nowrap style="padding: 4px 5px; border: 1px solid #CBD5E1; font-size: 8.5pt; font-weight: bold; color: #334155; white-space: nowrap;">{t['ref']}</td>
-                <td width="36%" style="padding: 4px 5px; border: 1px solid #CBD5E1; font-size: 8.5pt;">{t['description']}</td>
-                <td width="14%" nowrap style="padding: 4px 5px; border: 1px solid #CBD5E1; font-size: 8.5pt; text-align: right; color: #16A34A; font-weight: bold; white-space: nowrap;">{c_str}</td>
-                <td width="14%" nowrap style="padding: 4px 5px; border: 1px solid #CBD5E1; font-size: 8.5pt; text-align: right; color: #DC2626; font-weight: bold; white-space: nowrap;">{d_str}</td>
-                <td width="16%" nowrap style="padding: 4px 5px; border: 1px solid #CBD5E1; font-size: 8.5pt; text-align: right; font-weight: bold; color: {r_color}; white-space: nowrap;">{r_str}</td>
+                <td width="12%" nowrap style="padding: 3px 4px; border: 1px solid #CBD5E1; font-size: 8pt; white-space: nowrap;">{t['date_str']}</td>
+                <td width="10%" nowrap style="padding: 3px 4px; border: 1px solid #CBD5E1; font-size: 8pt; font-weight: bold; color: #334155; white-space: nowrap;">{t['ref']}</td>
+                <td width="30%" style="padding: 3px 4px; border: 1px solid #CBD5E1; font-size: 8pt; word-break: break-word;">{t['description']}</td>
+                <td width="16%" nowrap style="padding: 3px 4px; border: 1px solid #CBD5E1; font-size: 8pt; text-align: right; color: #16A34A; font-weight: bold; white-space: nowrap;">{c_str}</td>
+                <td width="16%" nowrap style="padding: 3px 4px; border: 1px solid #CBD5E1; font-size: 8pt; text-align: right; color: #DC2626; font-weight: bold; white-space: nowrap;">{d_str}</td>
+                <td width="16%" nowrap style="padding: 3px 4px; border: 1px solid #CBD5E1; font-size: 8pt; text-align: right; font-weight: bold; color: {r_color}; white-space: nowrap;">{r_str}</td>
             </tr>
             """
 
         if not d["transactions"]:
             rows_html = """
             <tr>
-                <td colspan="6" style="padding: 12px; text-align: center; color: #64748B; font-style: italic; border: 1px solid #CBD5E1; font-size: 10pt;">
+                <td colspan="6" style="padding: 12px; text-align: center; color: #64748B; font-style: italic; border: 1px solid #CBD5E1; font-size: 9.5pt;">
                     No financial transactions recorded for this account during the selected period.
                 </td>
             </tr>
@@ -182,12 +182,12 @@ class LedgerReportWindow(QDialog):
             <style>
                 @page {{
                     size: A4 portrait;
-                    margin: 12mm;
+                    margin: 8mm;
                 }}
                 body {{
                     font-family: 'Segoe UI', Arial, sans-serif;
                     margin: 0;
-                    padding: 4px;
+                    padding: 0;
                     color: #0F172A;
                     background-color: #FFFFFF;
                 }}
@@ -226,16 +226,16 @@ class LedgerReportWindow(QDialog):
                     page-break-inside: avoid;
                 }}
                 .info-table td {{
-                    padding: 6px 10px;
-                    font-size: 10.5pt;
+                    padding: 4px 8px;
+                    font-size: 9.5pt;
                     vertical-align: top;
                 }}
                 .table-main th {{
                     background-color: #F1F5F9;
                     color: #0F172A;
                     font-weight: bold;
-                    font-size: 10.5pt;
-                    padding: 7px 8px;
+                    font-size: 8pt;
+                    padding: 5px 4px;
                     border: 1px solid #CBD5E1;
                     text-align: left;
                 }}
@@ -243,9 +243,9 @@ class LedgerReportWindow(QDialog):
                     background-color: #F8FAFC;
                     border: 1px solid #CBD5E1;
                     border-radius: 6px;
-                    padding: 8px 12px;
-                    margin-top: 10px;
-                    margin-bottom: 12px;
+                    padding: 6px 10px;
+                    margin-top: 8px;
+                    margin-bottom: 8px;
                     page-break-inside: avoid;
                 }}
                 .statement-badge {{
@@ -291,12 +291,12 @@ class LedgerReportWindow(QDialog):
             <table width="100%" class="table-main" style="width: 100%; border-collapse: collapse; margin-bottom: 10px;">
                 <thead>
                     <tr>
-                        <th width="11%" nowrap style="padding: 4px 5px; font-size: 9pt; white-space: nowrap;">Date</th>
-                        <th width="9%" nowrap style="padding: 4px 5px; font-size: 9pt; white-space: nowrap;">Ref #</th>
-                        <th width="36%" nowrap style="padding: 4px 5px; font-size: 9pt; white-space: nowrap;">Transaction Description</th>
-                        <th width="14%" nowrap style="padding: 4px 5px; font-size: 9pt; text-align: right; white-space: nowrap;">{'Credit (Recv)' if w['category'] == 'Customer' else 'Credit (Earned)'}</th>
-                        <th width="14%" nowrap style="padding: 4px 5px; font-size: 9pt; text-align: right; white-space: nowrap;">{'Debit (Sales)' if w['category'] == 'Customer' else 'Debit (Paid)'}</th>
-                        <th width="16%" nowrap style="padding: 4px 5px; font-size: 9pt; text-align: right; white-space: nowrap;">Running Bal</th>
+                        <th width="12%" nowrap style="padding: 4px 4px; font-size: 8pt; font-weight: bold; white-space: nowrap;">Date</th>
+                        <th width="10%" nowrap style="padding: 4px 4px; font-size: 8pt; font-weight: bold; white-space: nowrap;">Ref #</th>
+                        <th width="30%" style="padding: 4px 4px; font-size: 8pt; font-weight: bold;">Transaction Description</th>
+                        <th width="16%" nowrap style="padding: 4px 4px; font-size: 8pt; font-weight: bold; text-align: right; white-space: nowrap;">{'Credit (Recv)' if w['category'] == 'Customer' else 'Credit (Earned)'}</th>
+                        <th width="16%" nowrap style="padding: 4px 4px; font-size: 8pt; font-weight: bold; text-align: right; white-space: nowrap;">{'Debit (Sales)' if w['category'] == 'Customer' else 'Debit (Paid)'}</th>
+                        <th width="16%" nowrap style="padding: 4px 4px; font-size: 8pt; font-weight: bold; text-align: right; white-space: nowrap;">Running Balance</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -357,7 +357,7 @@ class LedgerReportWindow(QDialog):
     def _print_to_printer(self, printer: QPrinter):
         """Render full-sized document in points matching the printer printable area."""
         doc = QTextDocument()
-        doc.setDocumentMargin(12)
+        doc.setDocumentMargin(0)
         # Use logical Point units so font sizes (10pt, 14pt, 17pt) fill the A4 page perfectly!
         page_size_pts = printer.pageLayout().paintRect(QPageLayout.Unit.Point).size()
         doc.setPageSize(QSizeF(page_size_pts.width(), page_size_pts.height()))
@@ -367,7 +367,7 @@ class LedgerReportWindow(QDialog):
     def _on_print(self):
         printer = QPrinter(QPrinter.PrinterResolution)
         printer.setPageSize(QPageSize(QPageSize.PageSizeId.A4))
-        printer.setPageMargins(QMarginsF(10, 10, 10, 10), QPageLayout.Unit.Millimeter)
+        printer.setPageMargins(QMarginsF(8, 8, 8, 8), QPageLayout.Unit.Millimeter)
 
         dlg = QPrintDialog(printer, self)
         dlg.setWindowTitle("🖨️ Print A4 Labour Ledger Statement")
@@ -383,7 +383,7 @@ class LedgerReportWindow(QDialog):
             printer = QPrinter(QPrinter.PrinterResolution)
             printer.setOutputFormat(QPrinter.PdfFormat)
             printer.setPageSize(QPageSize(QPageSize.PageSizeId.A4))
-            printer.setPageMargins(QMarginsF(10, 10, 10, 10), QPageLayout.Unit.Millimeter)
+            printer.setPageMargins(QMarginsF(8, 8, 8, 8), QPageLayout.Unit.Millimeter)
             printer.setOutputFileName(file_path)
 
             self._print_to_printer(printer)

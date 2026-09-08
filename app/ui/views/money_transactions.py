@@ -183,10 +183,22 @@ class MoneyTransactionsView(QWidget):
         self.badge_balance = QFrame()
         self.badge_balance.setStyleSheet("QFrame { background-color: #F8FAFC; border: 1px dashed #CBD5E1; border-radius: 6px; padding: 6px 12px; }")
         b_layout = QHBoxLayout(self.badge_balance)
-        b_layout.setContentsMargins(0, 0, 0, 0)
+        b_layout.setContentsMargins(4, 2, 4, 2)
         self.lbl_balance_text = QLabel("Account Balance: Select an account to view live position")
         self.lbl_balance_text.setStyleSheet("font-size: 12px; font-weight: 700; color: #475569;")
         b_layout.addWidget(self.lbl_balance_text)
+        b_layout.addStretch()
+
+        self.btn_view_khata = QPushButton("📑 View Full Khata Ledger (کھاتہ دیکھیں)")
+        self.btn_view_khata.setCursor(Qt.PointingHandCursor)
+        self.btn_view_khata.setMinimumHeight(28)
+        self.btn_view_khata.setStyleSheet(
+            "QPushButton { background-color: #0284C7; color: #FFFFFF; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 0 14px; border: none; } "
+            "QPushButton:hover { background-color: #0369A1; }"
+        )
+        self.btn_view_khata.clicked.connect(self._open_account_khata)
+        b_layout.addWidget(self.btn_view_khata)
+
         f_grid.addWidget(self.badge_balance, 2, 0, 1, 4)
 
         # Row 3: Amount, Payment Method, Bank Account, Cheque #
@@ -362,11 +374,15 @@ class MoneyTransactionsView(QWidget):
         self.table.setColumnCount(10)
         self.table.setHorizontalHeaderLabels([
             "Txn #", "Date", "Type", "Category", "Account Name",
-            "Amount (PKR)", "Method", "Description", "Ref", "Action"
+            "Amount (PKR)", "Method", "Description", "Ref", "Actions"
         ])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.table.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
         self.table.horizontalHeader().setSectionResizeMode(7, QHeaderView.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(9, QHeaderView.Fixed)
+        self.table.setColumnWidth(9, 150)
+        self.table.verticalHeader().setVisible(False)
+        self.table.verticalHeader().setDefaultSectionSize(48)
         self.table.setAlternatingRowColors(True)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
@@ -644,6 +660,26 @@ class MoneyTransactionsView(QWidget):
         except Exception as e:
             self.lbl_balance_text.setText(f"Account: {acc_id}")
 
+    def _open_account_khata(self):
+        acc_id = self.cmb_account.currentData()
+        if not acc_id:
+            ToastNotification.show_error(self, "Selection Required", "Please select an account first.")
+            return
+
+        from app.ui.views.ledger_report_window import LedgerReportWindow
+        today = date.today()
+        # Open ledger covering from past year to today
+        from_date = date(today.year - 1, 1, 1)
+        try:
+            ledger_data = LedgerService.calculate_worker_ledger(acc_id, from_date, today)
+            if not ledger_data:
+                ToastNotification.show_error(self, "Data Error", f"Could not load ledger for account {acc_id}.")
+                return
+            report_win = LedgerReportWindow(ledger_data, self)
+            report_win.exec()
+        except Exception as e:
+            ToastNotification.show_error(self, "Ledger Error", f"Error generating ledger report: {e}")
+
     def _on_save_transaction(self):
         acc_id = self.cmb_account.currentData()
         if not acc_id:
@@ -767,6 +803,8 @@ class MoneyTransactionsView(QWidget):
             t_type = t["TransactionType"]
             is_amdan = (t_type == "RECEIPT")
 
+            self.table.setRowHeight(r, 48)
+
             # Col 0: Txn #
             it_no = QTableWidgetItem(t_no)
             it_no.setFont(QFont("Segoe UI", 9, QFont.Bold))
@@ -810,14 +848,16 @@ class MoneyTransactionsView(QWidget):
             # Col 9: Actions (Print Voucher, Edit/Delete if Admin)
             action_widget = QWidget()
             act_layout = QHBoxLayout(action_widget)
-            act_layout.setContentsMargins(2, 2, 2, 2)
+            act_layout.setContentsMargins(4, 4, 4, 4)
             act_layout.setSpacing(6)
+            act_layout.setAlignment(Qt.AlignCenter)
 
             btn_voucher = QPushButton("🖨️")
             btn_voucher.setToolTip("View & Print Voucher")
-            btn_voucher.setFixedSize(32, 28)
+            btn_voucher.setFixedSize(38, 32)
+            btn_voucher.setCursor(Qt.PointingHandCursor)
             btn_voucher.setStyleSheet(
-                "QPushButton { background-color: #0284C7; color: #FFFFFF; font-weight: bold; border-radius: 4px; border: none; } "
+                "QPushButton { background-color: #0284C7; color: #FFFFFF; font-size: 15px; font-weight: bold; border-radius: 6px; border: 1px solid #0369A1; } "
                 "QPushButton:hover { background-color: #0369A1; }"
             )
             btn_voucher.clicked.connect(lambda _, x=t_id: self._open_voucher_by_id(x))
@@ -826,9 +866,10 @@ class MoneyTransactionsView(QWidget):
             if current_session.is_admin:
                 btn_edit = QPushButton("✏️")
                 btn_edit.setToolTip("Edit Transaction (Admin)")
-                btn_edit.setFixedSize(32, 28)
+                btn_edit.setFixedSize(38, 32)
+                btn_edit.setCursor(Qt.PointingHandCursor)
                 btn_edit.setStyleSheet(
-                    "QPushButton { background-color: #F59E0B; color: #FFFFFF; font-weight: bold; border-radius: 4px; border: none; } "
+                    "QPushButton { background-color: #F59E0B; color: #FFFFFF; font-size: 15px; font-weight: bold; border-radius: 6px; border: 1px solid #D97706; } "
                     "QPushButton:hover { background-color: #D97706; }"
                 )
                 btn_edit.clicked.connect(lambda _, x=t_id: self._load_transaction_for_edit(x))
@@ -836,9 +877,10 @@ class MoneyTransactionsView(QWidget):
 
                 btn_del = QPushButton("🗑️")
                 btn_del.setToolTip("Delete / Reverse Transaction (Admin)")
-                btn_del.setFixedSize(32, 28)
+                btn_del.setFixedSize(38, 32)
+                btn_del.setCursor(Qt.PointingHandCursor)
                 btn_del.setStyleSheet(
-                    "QPushButton { background-color: #EF4444; color: #FFFFFF; font-weight: bold; border-radius: 4px; border: none; } "
+                    "QPushButton { background-color: #EF4444; color: #FFFFFF; font-size: 15px; font-weight: bold; border-radius: 6px; border: 1px solid #DC2626; } "
                     "QPushButton:hover { background-color: #DC2626; }"
                 )
                 btn_del.clicked.connect(lambda _, x=t_id: self._delete_transaction(x))
