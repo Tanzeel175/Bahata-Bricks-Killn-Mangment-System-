@@ -5,8 +5,9 @@ from PySide6.QtWidgets import (
     QComboBox, QDateEdit, QTableWidget, QTableWidgetItem, QHeaderView,
     QFrame, QScrollArea, QMessageBox, QGroupBox, QCheckBox
 )
-from PySide6.QtCore import Qt, QDate, Signal, QTimer
-from PySide6.QtGui import QFont, QColor
+from PySide6.QtCore import Qt, QDate, Signal, QTimer, QByteArray, QSize
+from PySide6.QtGui import QFont, QColor, QIcon, QPixmap, QPainter
+from PySide6.QtSvg import QSvgRenderer
 
 from app.services.money_transaction_service import MoneyTransactionService
 from app.services.ledger_service import LedgerService
@@ -14,6 +15,34 @@ from app.ui.components.formatted_inputs import CurrencyEdit
 from app.ui.components.toast import ToastNotification
 from app.ui.views.voucher_window import VoucherWindow
 from app.security.session import current_session
+
+_SVG_PRINT = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <polyline points="6 9 6 2 18 2 18 9"></polyline>
+  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+  <rect x="6" y="14" width="12" height="8"></rect>
+</svg>"""
+
+_SVG_EDIT = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+</svg>"""
+
+_SVG_DELETE = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <polyline points="3 6 5 6 21 6"></polyline>
+  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+  <line x1="10" y1="11" x2="10" y2="17"></line>
+  <line x1="14" y1="11" x2="14" y2="17"></line>
+</svg>"""
+
+
+def _create_svg_icon(svg_text: str, size: int = 14) -> QIcon:
+    renderer = QSvgRenderer(QByteArray(svg_text.encode("utf-8")))
+    pix = QPixmap(size, size)
+    pix.fill(Qt.transparent)
+    p = QPainter(pix)
+    renderer.render(p)
+    p.end()
+    return QIcon(pix)
 
 
 class MoneyTransactionsView(QWidget):
@@ -380,7 +409,7 @@ class MoneyTransactionsView(QWidget):
         self.table.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
         self.table.horizontalHeader().setSectionResizeMode(7, QHeaderView.Stretch)
         self.table.horizontalHeader().setSectionResizeMode(9, QHeaderView.Fixed)
-        self.table.setColumnWidth(9, 150)
+        self.table.setColumnWidth(9, 215)
         self.table.verticalHeader().setVisible(False)
         self.table.verticalHeader().setDefaultSectionSize(48)
         self.table.setAlternatingRowColors(True)
@@ -794,6 +823,15 @@ class MoneyTransactionsView(QWidget):
             search_query=search_q
         )
 
+        # Clean up any existing cell widgets to prevent ghost widgets at (0, 0)
+        for r in range(self.table.rowCount()):
+            old_w = self.table.cellWidget(r, 9)
+            if old_w:
+                self.table.removeCellWidget(r, 9)
+                old_w.setParent(None)
+                old_w.deleteLater()
+        self.table.clearContents()
+
         self.table.setRowCount(len(txns))
         self.lbl_table_count.setText(f"Total Transactions: {len(txns)}")
 
@@ -848,45 +886,52 @@ class MoneyTransactionsView(QWidget):
             # Col 9: Actions (Print Voucher, Edit/Delete if Admin)
             action_widget = QWidget()
             act_layout = QHBoxLayout(action_widget)
-            act_layout.setContentsMargins(4, 4, 4, 4)
+            act_layout.setContentsMargins(2, 2, 2, 2)
             act_layout.setSpacing(6)
             act_layout.setAlignment(Qt.AlignCenter)
 
-            btn_voucher = QPushButton("🖨️")
-            btn_voucher.setToolTip("View & Print Voucher")
-            btn_voucher.setFixedSize(38, 32)
+            btn_voucher = QPushButton(" Print")
+            btn_voucher.setIcon(_create_svg_icon(_SVG_PRINT, 13))
+            btn_voucher.setIconSize(QSize(13, 13))
+            btn_voucher.setToolTip("View & Print Voucher (واؤچر دیکھیں اور پرنٹ کریں)")
+            btn_voucher.setFixedHeight(30)
             btn_voucher.setCursor(Qt.PointingHandCursor)
             btn_voucher.setStyleSheet(
-                "QPushButton { background-color: #0284C7; color: #FFFFFF; font-size: 15px; font-weight: bold; border-radius: 6px; border: 1px solid #0369A1; } "
+                "QPushButton { background-color: #0284C7; color: #FFFFFF; font-size: 11px; font-weight: 700; border-radius: 5px; padding: 0 8px; border: none; } "
                 "QPushButton:hover { background-color: #0369A1; }"
             )
             btn_voucher.clicked.connect(lambda _, x=t_id: self._open_voucher_by_id(x))
             act_layout.addWidget(btn_voucher)
 
             if current_session.is_admin:
-                btn_edit = QPushButton("✏️")
-                btn_edit.setToolTip("Edit Transaction (Admin)")
-                btn_edit.setFixedSize(38, 32)
+                btn_edit = QPushButton(" Edit")
+                btn_edit.setIcon(_create_svg_icon(_SVG_EDIT, 13))
+                btn_edit.setIconSize(QSize(13, 13))
+                btn_edit.setToolTip("Edit Transaction (تبدیل کریں)")
+                btn_edit.setFixedHeight(30)
                 btn_edit.setCursor(Qt.PointingHandCursor)
                 btn_edit.setStyleSheet(
-                    "QPushButton { background-color: #F59E0B; color: #FFFFFF; font-size: 15px; font-weight: bold; border-radius: 6px; border: 1px solid #D97706; } "
+                    "QPushButton { background-color: #F59E0B; color: #FFFFFF; font-size: 11px; font-weight: 700; border-radius: 5px; padding: 0 8px; border: none; } "
                     "QPushButton:hover { background-color: #D97706; }"
                 )
                 btn_edit.clicked.connect(lambda _, x=t_id: self._load_transaction_for_edit(x))
                 act_layout.addWidget(btn_edit)
 
-                btn_del = QPushButton("🗑️")
-                btn_del.setToolTip("Delete / Reverse Transaction (Admin)")
-                btn_del.setFixedSize(38, 32)
+                btn_del = QPushButton(" Del")
+                btn_del.setIcon(_create_svg_icon(_SVG_DELETE, 13))
+                btn_del.setIconSize(QSize(13, 13))
+                btn_del.setToolTip("Delete / Reverse Transaction (ختم کریں)")
+                btn_del.setFixedHeight(30)
                 btn_del.setCursor(Qt.PointingHandCursor)
                 btn_del.setStyleSheet(
-                    "QPushButton { background-color: #EF4444; color: #FFFFFF; font-size: 15px; font-weight: bold; border-radius: 6px; border: 1px solid #DC2626; } "
+                    "QPushButton { background-color: #EF4444; color: #FFFFFF; font-size: 11px; font-weight: 700; border-radius: 5px; padding: 0 8px; border: none; } "
                     "QPushButton:hover { background-color: #DC2626; }"
                 )
                 btn_del.clicked.connect(lambda _, x=t_id: self._delete_transaction(x))
                 act_layout.addWidget(btn_del)
 
             self.table.setCellWidget(r, 9, action_widget)
+            self.table.setRowHeight(r, 48)
 
     def _apply_table_filters(self):
         self._load_register_table()

@@ -397,6 +397,11 @@ class LedgerService:
 
         try:
             with get_db_session() as session:
+                worker = session.query(LabourAccount).filter_by(WorkerID=worker_id).first()
+                is_customer = False
+                if worker and worker.account_type and worker.account_type.AccountTypeName == "Customer":
+                    is_customer = True
+
                 payment_repo = PaymentRepository(session)
                 audit_repo = AuditRepository(session)
 
@@ -411,15 +416,17 @@ class LedgerService:
 
                 # Synchronize to unified MoneyTransactions table
                 txn_repo = TransactionRepository(session)
-                txn_no = txn_repo.get_next_transaction_no("PAYMENT")
+                txn_type = "RECEIPT" if is_customer else "PAYMENT"
+                txn_no = txn_repo.get_next_transaction_no(txn_type)
                 method_name = "Cash" if "cash" in (payment_type or "").lower() else "Bank"
+                desc = remarks or (f"Customer payment: {payment_type}" if is_customer else f"Labour payment: {payment_type}")
                 txn_repo.create_transaction(
                     txn_no=txn_no,
-                    txn_type="PAYMENT",
+                    txn_type=txn_type,
                     txn_date=payment_date,
                     account_id=worker_id,
                     amount=amount,
-                    description=remarks or f"Labour payment: {payment_type}",
+                    description=desc,
                     payment_method=method_name,
                     reference_type="LabourPayment",
                     reference_id=str(payment.PaymentID),
@@ -427,13 +434,14 @@ class LedgerService:
                 )
 
                 audit_repo.log_event(
-                    action="PAYMENT_CREATE",
+                    action="PAYMENT_CREATE" if not is_customer else "RECEIPT_CREATE",
                     username=user_name,
                     user_id=current_session.user_id,
-                    details=f"PAYMENT_CREATE: PaymentID={payment.PaymentID}, TransactionNo={txn_no}, WorkerID='{worker_id}', Amount={amount:,.2f}"
+                    details=f"PAYMENT_RECORD: PaymentID={payment.PaymentID}, TransactionNo={txn_no}, AccountID='{worker_id}', Amount={amount:,.2f}"
                 )
 
                 session.commit()
-                return True, f"Payment of Rs. {amount:,.2f} recorded successfully for Worker {worker_id}."
+                entity_label = "Customer" if is_customer else "Worker"
+                return True, f"Payment of Rs. {amount:,.2f} recorded successfully for {entity_label} {worker_id}."
         except Exception as e:
             return False, f"Failed to record payment: {e}"

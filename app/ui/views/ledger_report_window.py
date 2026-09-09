@@ -18,10 +18,13 @@ class LedgerReportWindow(QDialog):
     Outputs crystal-clear, full-sized A4 multi-page documents for print and PDF.
     """
 
-    def __init__(self, ledger_data: Dict[str, Any], parent=None):
+    def __init__(self, ledger_data: Dict[str, Any], from_date=None, to_date=None, parent=None):
         super().__init__(parent)
         self.ledger_data = ledger_data
+        self.from_date = from_date
+        self.to_date = to_date
         worker = ledger_data.get("worker", {})
+        self.worker_id = worker.get("worker_id", "")
         w_name = worker.get("english_name", "Labourer")
         w_id = worker.get("worker_id", "")
 
@@ -76,6 +79,16 @@ class LedgerReportWindow(QDialog):
         )
         self.btn_zoom_in.clicked.connect(self._zoom_in)
         tb_layout.addWidget(self.btn_zoom_in)
+
+        # Refresh Data Button
+        self.btn_refresh = QPushButton("🔄 Refresh")
+        self.btn_refresh.setToolTip("Reload latest data from database")
+        self.btn_refresh.setStyleSheet(
+            "QPushButton { background-color: #F1F5F9; color: #0284C7; font-weight: 700; font-size: 12px; border-radius: 6px; padding: 6px 14px; border: 1px solid #BAE6FD; } "
+            "QPushButton:hover { background-color: #E0F2FE; }"
+        )
+        self.btn_refresh.clicked.connect(self._on_refresh_data)
+        tb_layout.addWidget(self.btn_refresh)
 
         # Print Button
         self.btn_print = QPushButton("🖨️ Print Report")
@@ -388,3 +401,13 @@ class LedgerReportWindow(QDialog):
 
             self._print_to_printer(printer)
             ToastNotification.show_success(self, "PDF Exported", f"A4 PDF saved successfully to:\n{file_path}")
+
+    def _on_refresh_data(self):
+        if not self.worker_id or not self.from_date or not self.to_date:
+            return
+        from app.services.ledger_service import LedgerService
+        new_data = LedgerService.calculate_worker_ledger(self.worker_id, self.from_date, self.to_date)
+        if new_data:
+            self.ledger_data = new_data
+            self._render_report()
+            ToastNotification.show_success(self, "Report Refreshed", "Latest transactions loaded from database.")

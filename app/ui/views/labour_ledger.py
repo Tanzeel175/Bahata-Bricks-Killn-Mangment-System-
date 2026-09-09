@@ -207,6 +207,17 @@ class LabourLedgerView(QWidget):
         info_header_row.addWidget(info_title)
         info_header_row.addStretch()
 
+        self.btn_refresh = QPushButton("🔄 Refresh (تازہ کریں)")
+        self.btn_refresh.setCursor(Qt.PointingHandCursor)
+        self.btn_refresh.setToolTip("Reload Khata balance & latest entries from database")
+        self.btn_refresh.setStyleSheet(
+            "QPushButton { background-color: #F1F5F9; color: #0284C7; font-weight: 700; font-size: 11px; "
+            "border: 1px solid #BAE6FD; border-radius: 6px; padding: 3px 10px; } "
+            "QPushButton:hover { background-color: #E0F2FE; }"
+        )
+        self.btn_refresh.clicked.connect(self.refresh_view)
+        info_header_row.addWidget(self.btn_refresh)
+
         self.lbl_info_balance = QLabel("Balance: Loading...")
         self.lbl_info_balance.setStyleSheet(
             "font-size: 12px; font-weight: 800; color: #0284C7; background-color: #F0F9FF; "
@@ -331,23 +342,45 @@ class LabourLedgerView(QWidget):
 
     def _load_categories(self):
         categories = LedgerService.get_supported_categories()
+        curr_cat = self.cmb_category.currentText()
+        self.cmb_category.blockSignals(True)
         self.cmb_category.clear()
         self.cmb_category.addItems(categories)
-        if categories:
-            self._on_category_changed(categories[0])
+        if curr_cat and curr_cat in categories:
+            self.cmb_category.setCurrentText(curr_cat)
+        self.cmb_category.blockSignals(False)
 
-    def _on_category_changed(self, category_name: str):
+        target_cat = self.cmb_category.currentText() or (categories[0] if categories else "")
+        if target_cat:
+            self._on_category_changed(target_cat)
+
+    def _on_category_changed(self, category_name: str, preserve_worker_id: str = None):
+        if not preserve_worker_id:
+            curr_w = self.cmb_worker.currentData()
+            if curr_w:
+                preserve_worker_id = curr_w.get("WorkerID")
+
         workers = LedgerService.get_workers_by_category(category_name)
+        self.cmb_worker.blockSignals(True)
         self.cmb_worker.clear()
-        for w in workers:
+        target_index = -1
+        for idx, w in enumerate(workers):
             display_text = f"{w['WorkerID']} — {w['EnglishName']}"
             if w.get('UrduName'):
                 display_text += f" ({w['UrduName']})"
             self.cmb_worker.addItem(display_text, userData=w)
+            if preserve_worker_id and w['WorkerID'] == preserve_worker_id:
+                target_index = idx
 
         if not workers:
             self.cmb_worker.addItem("No active labourers found in this category", userData=None)
 
+        if target_index >= 0:
+            self.cmb_worker.setCurrentIndex(target_index)
+        elif workers:
+            self.cmb_worker.setCurrentIndex(0)
+
+        self.cmb_worker.blockSignals(False)
         self._on_worker_changed()
 
     def _set_preset_this_month(self):
@@ -436,23 +469,43 @@ class LabourLedgerView(QWidget):
             return
 
         worker_id = w_data["WorkerID"]
+        # Immediately recalculate live balance
+        self._on_worker_changed()
+
         ledger_data = LedgerService.calculate_worker_ledger(worker_id, from_date, to_date)
         if not ledger_data:
             ToastNotification.show_error(self, "Data Error", f"Could not load ledger for worker {worker_id}.")
             return
 
-        # Open dedicated popup report window
-        report_win = LedgerReportWindow(ledger_data, self)
+        # Open dedicated popup report window with date range support
+        report_win = LedgerReportWindow(ledger_data, from_date, to_date, self)
         report_win.exec()
+        # Re-sync on dialog close
+        self.refresh_view()
+
+    def refresh_view(self):
+        """Refreshes active accounts from database and live Khata balance."""
+        curr_cat = self.cmb_category.currentText()
+        curr_w = self.cmb_worker.currentData()
+        curr_wid = curr_w.get("WorkerID") if curr_w else None
+        if curr_cat:
+            self._on_category_changed(curr_cat, preserve_worker_id=curr_wid)
+        else:
+            self._load_categories()
 
     def _on_record_payment(self):
         w_data = self.cmb_worker.currentData()
         if not w_data:
-            ToastNotification.show_error(self, "Selection Required", "Please select a valid labourer first.")
+            ToastNotification.show_error(self, "Selection Required", "Please select a valid account/labourer first.")
             return
 
         dlg = RecordPaymentDialog(w_data["WorkerID"], w_data["EnglishName"], self)
-        dlg.exec()
+        if dlg.exec() == RecordPaymentDialog.Accepted:
+            # 1. Immediately refresh view and live balance badge on the screen
+            self.refresh_view()
+            # 2. Ensure To Date covers today so newly saved payment is included in the period
+            if self.dt_to.date() < QDate.currentDate():
+                self.dt_to.setDate(QDate.currentDate())
 
     def _on_open_amdan_akrajat(self):
         main_win = self.window()

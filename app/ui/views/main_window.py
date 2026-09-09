@@ -580,6 +580,7 @@ class MainWindow(QMainWindow):
         from app.ui.views.labour_ledger import LabourLedgerView
         for idx in range(self.tab_widget.count()):
             if isinstance(self.tab_widget.widget(idx), LabourLedgerView):
+                self.tab_widget.widget(idx).refresh_view()
                 self.tab_widget.setCurrentIndex(idx)
                 return
         view = LabourLedgerView()
@@ -612,6 +613,12 @@ class MainWindow(QMainWindow):
                     return
 
         self._prev_tab_index = new_index
+        if new_index >= 0:
+            current_tab = self.tab_widget.widget(new_index)
+            if hasattr(current_tab, "refresh_view"):
+                current_tab.refresh_view()
+            elif hasattr(current_tab, "refresh_all_data"):
+                current_tab.refresh_all_data()
 
     def _on_close_tab(self, index: int):
         if index > 0:  # Don't close dashboard tab
