@@ -4,7 +4,7 @@ from app.validators.labour_validator import validate_cnic, format_cnic, validate
 
 
 def test_password_strength_valid():
-    valid, errors = validate_password_strength("Admin@123")
+    valid, errors = validate_password_strength("SecureAdmin@123")
     assert valid is True
     assert len(errors) == 0
 
@@ -12,7 +12,7 @@ def test_password_strength_valid():
 def test_password_strength_invalid():
     valid, errors = validate_password_strength("weak")
     assert valid is False
-    assert any("at least 8 characters" in e for e in errors)
+    assert any("at least 12 characters" in e for e in errors)
     assert any("uppercase" in e for e in errors)
     assert any("number" in e for e in errors)
     assert any("special" in e for e in errors)

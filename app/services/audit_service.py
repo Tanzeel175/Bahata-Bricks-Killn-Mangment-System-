@@ -3,12 +3,14 @@ from sqlalchemy import or_
 from app.database.connection import get_db_session
 from app.database.schema import AuditLog
 from app.repositories.audit_repository import AuditRepository
+from app.security.rbac import require_admin
 
 
 class AuditService:
     """Service layer for fetching read-only Audit Trail logs."""
 
     @staticmethod
+    @require_admin
     def get_audit_logs(
         query_str: Optional[str] = None,
         action_filter: Optional[str] = None,

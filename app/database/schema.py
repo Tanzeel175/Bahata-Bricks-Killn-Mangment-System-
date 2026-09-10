@@ -32,6 +32,7 @@ class User(Base):
     IsActive = Column(Boolean, default=True, nullable=False)
     IsLocked = Column(Boolean, default=False, nullable=False)
     FailedAttempts = Column(Integer, default=0, nullable=False)
+    MustChangePassword = Column(Boolean, default=False, nullable=False)
     CreatedBy = Column(String(50), nullable=True)
     CreatedDate = Column(DateTime, default=datetime.utcnow, nullable=False)
     LastLogin = Column(DateTime, nullable=True)
@@ -368,4 +369,3 @@ class MoneyTransaction(Base):
 
     def __repr__(self):
         return f"<MoneyTransaction(ID={self.TransactionID}, No='{self.TransactionNo}', Type='{self.TransactionType}', Account='{self.AccountID}', Amount={self.Amount})>"
-

@@ -5,7 +5,10 @@ from PySide6.QtCore import Qt
 from app.ui.components.wheel_filter import GlobalFocusWheelEventFilter
 from app.database.init_db import init_db
 from app.ui.views.login_window import LoginWindow
+from app.ui.views.initial_setup import InitialSetupDialog
+from app.ui.views.password_change import PasswordChangeDialog
 from app.ui.views.main_window import MainWindow
+from app.services.auth_service import AuthService
 
 # Configure logging
 logging.basicConfig(
@@ -113,9 +116,20 @@ def main():
     except Exception as e:
         logger.error(f"Database initialization error: {e}")
 
+    if AuthService.needs_initial_setup():
+        setup_dialog = InitialSetupDialog()
+        if setup_dialog.exec() != InitialSetupDialog.Accepted:
+            logger.info("Application exited before initial administrator setup.")
+            return
+
     # Launch Login Screen
     login_dialog = LoginWindow()
     if login_dialog.exec() == LoginWindow.Accepted:
+        if AuthService.requires_password_change():
+            change_dialog = PasswordChangeDialog()
+            if change_dialog.exec() != PasswordChangeDialog.Accepted:
+                AuthService.logout()
+                return
         logger.info("Authentication successful. Launching main workspace...")
         main_win = MainWindow()
         main_win.showMaximized()

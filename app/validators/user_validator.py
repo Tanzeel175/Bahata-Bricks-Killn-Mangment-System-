@@ -1,5 +1,6 @@
 import re
 from typing import List, Tuple
+from app.config import MAX_PASSWORD_LENGTH
 
 
 def validate_password_strength(password: str) -> Tuple[bool, List[str]]:
@@ -12,8 +13,10 @@ def validate_password_strength(password: str) -> Tuple[bool, List[str]]:
     - At least one special character
     """
     errors = []
-    if len(password) < 8:
-        errors.append("Password must be at least 8 characters long.")
+    if len(password) < 12:
+        errors.append("Password must be at least 12 characters long.")
+    if len(password) > MAX_PASSWORD_LENGTH:
+        errors.append(f"Password must not exceed {MAX_PASSWORD_LENGTH} characters.")
     if not re.search(r"[A-Z]", password):
         errors.append("Password must contain at least one uppercase letter (A-Z).")
     if not re.search(r"[a-z]", password):

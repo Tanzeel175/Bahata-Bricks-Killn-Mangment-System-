@@ -7,7 +7,7 @@ from app.repositories.rate_repository import RateRepository
 from app.repositories.labour_repository import LabourRepository
 from app.repositories.product_repository import ProductRepository
 from app.repositories.audit_repository import AuditRepository
-from app.security.rbac import can_delete_records
+from app.security.rbac import can_delete_records, require_authenticated
 from app.security.session import current_session
 
 
@@ -16,6 +16,7 @@ class ProductionService:
 
     # --- PRODUCTION ENTRIES ---
     @staticmethod
+    @require_authenticated
     def save_production_entry(
         entry_date: date,
         account_type_id: int,
@@ -97,6 +98,7 @@ class ProductionService:
             return False, f"Failed to save production entry: {e}"
 
     @staticmethod
+    @require_authenticated
     def delete_production_entry(production_id: int) -> Tuple[bool, str]:
         if not can_delete_records():
             return False, "Access Denied: Only Administrator role is permitted to delete production entries."
@@ -233,6 +235,7 @@ class ProductionService:
 
     # --- LABOUR RATE MANAGEMENT ---
     @staticmethod
+    @require_authenticated
     def save_worker_rates(worker_id: str, rate_dict: Dict[int, float]) -> Tuple[bool, str]:
         # Validate rates non-negative
         for pid, r in rate_dict.items():

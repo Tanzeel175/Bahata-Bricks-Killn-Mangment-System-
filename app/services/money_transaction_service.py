@@ -6,7 +6,7 @@ from app.repositories.transaction_repository import TransactionRepository
 from app.repositories.labour_repository import LabourRepository
 from app.repositories.audit_repository import AuditRepository
 from app.validators.transaction_validator import TransactionValidator
-from app.security.rbac import can_delete_records
+from app.security.rbac import can_delete_records, require_authenticated
 from app.security.session import current_session
 
 
@@ -94,6 +94,7 @@ class MoneyTransactionService:
             return repo.get_cash_summary(as_of_date)
 
     @staticmethod
+    @require_authenticated
     def save_transaction(
         txn_type: str,
         txn_date: date,
@@ -209,6 +210,7 @@ class MoneyTransactionService:
             return False, f"Failed to record money transaction: {e}", None
 
     @staticmethod
+    @require_authenticated
     def update_transaction(
         transaction_id: int,
         txn_date: date,
@@ -278,6 +280,7 @@ class MoneyTransactionService:
             return False, f"Failed to update transaction: {e}"
 
     @staticmethod
+    @require_authenticated
     def delete_transaction(transaction_id: int, reason: str = "") -> Tuple[bool, str]:
         """Soft delete a transaction and reverse its effect. Only permitted for Administrators."""
         if not can_delete_records():

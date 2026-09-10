@@ -5,6 +5,8 @@ from pathlib import Path
 # Force isolated test database file BEFORE any app modules load
 TEST_DB_PATH = Path(__file__).resolve().parent / "bahta_test.db"
 os.environ["BAHTA_SQLITE_PATH"] = str(TEST_DB_PATH)
+# Sample business records remain available to tests, while production seeding stays opt-in.
+os.environ["BAHTA_SEED_DEMO_DATA"] = "true"
 
 # Configure app config and database connection to use test database
 import app.config

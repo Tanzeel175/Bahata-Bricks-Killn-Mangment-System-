@@ -4,7 +4,7 @@ from app.database.connection import get_db_session
 from app.database.schema import LabourAccount, AccountType
 from app.repositories.labour_repository import LabourRepository
 from app.repositories.audit_repository import AuditRepository
-from app.security.rbac import can_delete_records, require_admin
+from app.security.rbac import can_delete_records, require_admin, require_authenticated
 from app.security.session import current_session
 from app.validators.labour_validator import (
     validate_labour_account, format_cnic, format_mobile
@@ -78,6 +78,7 @@ class LabourService:
             }
 
     @staticmethod
+    @require_authenticated
     def save_account(data: Dict[str, Any], is_edit_mode: bool = False) -> Tuple[bool, str]:
         # Perform validation
         valid, errors = validate_labour_account(data)
@@ -160,6 +161,7 @@ class LabourService:
                 return True, f"Labour Account '{worker_id}' updated successfully."
 
     @staticmethod
+    @require_authenticated
     def omit_account(worker_id: str, reason: str) -> Tuple[bool, str]:
         if not reason or not reason.strip():
             return False, "Omit reason is required."
@@ -210,6 +212,7 @@ class LabourService:
             return True, f"Account '{worker_id}' has been reactivated."
 
     @staticmethod
+    @require_authenticated
     def delete_account(worker_id: str) -> Tuple[bool, str]:
         # Rule check: Munshi cannot delete
         if not can_delete_records():
@@ -288,7 +291,7 @@ class LabourService:
             repo = LabourRepository(session)
             audit_repo = AuditRepository(session)
             counts = repo.get_summary_counts()
-            recent_logs = audit_repo.get_recent_logs(limit=10)
+            recent_logs = audit_repo.get_recent_logs(limit=10) if current_session.is_admin else []
             counts["recent_logs"] = [
                 {
                     "Username": log.Username or "N/A",
@@ -299,4 +302,3 @@ class LabourService:
                 for log in recent_logs
             ]
             return counts
-

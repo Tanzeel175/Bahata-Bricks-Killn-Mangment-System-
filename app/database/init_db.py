@@ -1,12 +1,13 @@
 import logging
+import os
 from datetime import datetime, date
 from app.database.schema import (
     Base, Role, User, AccountType, ProductCategory, Product, ProductCategoryMapping,
     LabourAccount, LabourRate, ProductionHeader, ProductionDetail, LabourPayment,
     MoneyTransaction
 )
-from app.database.connection import get_engine, get_db_session
-from app.security.hashing import hash_password
+from app.database.connection import get_engine, get_db_session, protect_local_database_file
+from app.security.hashing import verify_password
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +46,9 @@ def _migrate_schema(engine):
                     conn.exec_driver_sql("ALTER TABLE SalesHeader ADD COLUMN VehicleNumber VARCHAR(50);")
                 if "DriverName" not in columns:
                     conn.exec_driver_sql("ALTER TABLE SalesHeader ADD COLUMN DriverName VARCHAR(100);")
+            user_columns = [row[1] for row in conn.exec_driver_sql("PRAGMA table_info(Users);").fetchall()]
+            if user_columns and "MustChangePassword" not in user_columns:
+                conn.exec_driver_sql("ALTER TABLE Users ADD COLUMN MustChangePassword BOOLEAN NOT NULL DEFAULT 0;")
             conn.commit()
     except Exception as e:
         logger.warning(f"Schema migration warning: {e}")
@@ -55,6 +59,7 @@ def init_db():
     engine = get_engine()
     Base.metadata.create_all(bind=engine)
     _migrate_schema(engine)
+    protect_local_database_file()
 
     with get_db_session() as session:
         # Seed Roles
@@ -70,41 +75,15 @@ def init_db():
 
         session.flush()
 
-        # Seed Default Admin User
-        default_admin = session.query(User).filter_by(Username="admin").first()
-        if not default_admin:
-            hashed = hash_password("Admin@123")
-            admin_user = User(
-                Username="admin",
-                PasswordHash=hashed,
-                FullName="System Administrator",
-                Email="admin@bahtakiln.com",
-                Mobile="03001234567",
-                RoleID=admin_role.RoleID,
-                IsActive=True,
-                IsLocked=False,
-                CreatedBy="SYSTEM"
-            )
-            session.add(admin_user)
-            logger.info("Default admin user created ('admin' / 'Admin@123').")
+        # Existing installations may contain previously documented credentials.
+        # They keep access but are forced through the local password-change flow after login.
+        for username, known_password in (("admin", "Admin@123"), ("munshi", "Munshi@123")):
+            legacy_user = session.query(User).filter_by(Username=username).first()
+            if legacy_user and verify_password(known_password, legacy_user.PasswordHash):
+                legacy_user.MustChangePassword = True
 
-        # Seed Default Munshi User for testing convenience
-        default_munshi = session.query(User).filter_by(Username="munshi").first()
-        if not default_munshi:
-            hashed = hash_password("Munshi@123")
-            munshi_user = User(
-                Username="munshi",
-                PasswordHash=hashed,
-                FullName="Munshi Ali",
-                Email="munshi@bahtakiln.com",
-                Mobile="03007654321",
-                RoleID=munshi_role.RoleID,
-                IsActive=True,
-                IsLocked=False,
-                CreatedBy="SYSTEM"
-            )
-            session.add(munshi_user)
-            logger.info("Default munshi user created ('munshi' / 'Munshi@123').")
+        # User accounts are intentionally never seeded with known credentials.
+        # The first launch presents a local administrator-setup screen instead.
 
         # Seed Account Types
         for type_name in DEFAULT_ACCOUNT_TYPES:
@@ -162,8 +141,9 @@ def init_db():
 
         session.flush()
 
-        # --- SEED COMPREHENSIVE DUMMY DATA FOR TESTING & PREVIEW ---
-        seed_dummy_data(session)
+        # Demo records are opt-in only; production databases must not receive test PII.
+        if os.getenv("BAHTA_SEED_DEMO_DATA", "").lower() in {"1", "true", "yes"}:
+            seed_dummy_data(session)
 
         session.commit()
         logger.info("Database initialized and seeded successfully.")

@@ -11,6 +11,7 @@ from app.repositories.payment_repository import PaymentRepository
 from app.repositories.transaction_repository import TransactionRepository
 from app.repositories.audit_repository import AuditRepository
 from app.security.session import current_session
+from app.security.rbac import require_authenticated
 
 
 class LedgerService:
@@ -381,6 +382,7 @@ class LedgerService:
             }
 
     @staticmethod
+    @require_authenticated
     def save_labour_payment(
         worker_id: str,
         payment_date: date,

@@ -1,11 +1,37 @@
 from contextlib import contextmanager
+import os
+import subprocess
+from pathlib import Path
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.pool import NullPool
-from app.config import get_database_url
+from app.config import get_database_url, DB_TYPE
 
 _engine = None
 _SessionFactory = None
+
+
+def protect_local_database_file() -> None:
+    """Restrict the SQLite database to the interactive OS account where possible."""
+    if DB_TYPE != "sqlite":
+        return
+    db_path = Path(get_database_url().replace("sqlite:///", ""))
+    if not db_path.exists():
+        return
+    try:
+        os.chmod(db_path, 0o600)
+    except OSError:
+        pass
+    if os.name == "nt":
+        username = os.environ.get("USERNAME")
+        if username:
+            try:
+                subprocess.run(
+                    ["icacls", str(db_path), "/inheritance:r", "/grant:r", f"{username}:(F)"],
+                    check=False, capture_output=True, text=True, timeout=10
+                )
+            except (OSError, subprocess.SubprocessError):
+                pass
 
 
 def get_engine():

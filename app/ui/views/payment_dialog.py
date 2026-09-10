@@ -99,6 +99,7 @@ class RecordPaymentDialog(QDialog):
         self.txt_amount.setPlaceholderText("0.00")
         self.txt_amount.setMinimumHeight(38)
         self.txt_amount.setStyleSheet("font-size: 14px; font-weight: 700; padding-left: 8px;")
+        self.txt_amount.returnPressed.connect(self._on_save)
         f_layout.addWidget(lbl_amount)
         f_layout.addWidget(self.txt_amount)
         f_layout.addSpacing(8)
@@ -110,6 +111,7 @@ class RecordPaymentDialog(QDialog):
         self.txt_remarks.setPlaceholderText("Optional notes (e.g. Weekly Cash Advance)")
         self.txt_remarks.setMinimumHeight(38)
         self.txt_remarks.setStyleSheet("font-size: 13px; padding-left: 8px;")
+        self.txt_remarks.returnPressed.connect(self._on_save)
         f_layout.addWidget(lbl_remarks)
         f_layout.addWidget(self.txt_remarks)
 
@@ -124,12 +126,16 @@ class RecordPaymentDialog(QDialog):
         btn_layout.addStretch()
 
         self.btn_cancel = QPushButton("Cancel")
+        self.btn_cancel.setAutoDefault(False)
+        self.btn_cancel.setDefault(False)
         self.btn_cancel.setMinimumHeight(38)
         self.btn_cancel.setCursor(Qt.PointingHandCursor)
         self.btn_cancel.setStyleSheet("QPushButton { background-color: #F1F5F9; color: #475569; font-weight: 700; font-size: 13px; border-radius: 6px; padding: 0 20px; border: 1px solid #CBD5E1; } QPushButton:hover { background-color: #E2E8F0; }")
         self.btn_cancel.clicked.connect(self.reject)
 
         self.btn_save = QPushButton("💾 Save Payment")
+        self.btn_save.setAutoDefault(True)
+        self.btn_save.setDefault(True)
         self.btn_save.setMinimumHeight(38)
         self.btn_save.setCursor(Qt.PointingHandCursor)
         self.btn_save.setStyleSheet("QPushButton { background-color: #16A34A; color: #FFFFFF; font-weight: 700; font-size: 13px; border-radius: 6px; padding: 0 24px; border: none; } QPushButton:hover { background-color: #15803D; }")
@@ -139,6 +145,13 @@ class RecordPaymentDialog(QDialog):
         btn_layout.addWidget(self.btn_save)
 
         root_layout.addLayout(btn_layout)
+
+    def keyPressEvent(self, event):
+        if event.key() in (Qt.Key_Return, Qt.Key_Enter):
+            self._on_save()
+            event.accept()
+            return
+        super().keyPressEvent(event)
 
     def _on_save(self):
         amount = self.txt_amount.get_value()

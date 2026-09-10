@@ -25,143 +25,57 @@ from app.ui.views.money_transactions import MoneyTransactionsView
 
 
 class SidebarNav(QFrame):
-    """Left Navigation Sidebar Panel matching reference UI design."""
+    """Premium ERP navigation with compact, role-aware work areas."""
 
     def __init__(self, main_win, parent=None):
         super().__init__(parent)
         self.main_win = main_win
-        self.setFixedWidth(230)
-        self.setStyleSheet(
-            "QFrame { background-color: #FFFFFF; border-right: 1px solid #E2E8F0; }"
-        )
+        self.setFixedWidth(270)
+        self.setObjectName("premiumSidebar")
         self._init_ui()
 
     def _init_ui(self):
         outer_layout = QVBoxLayout(self)
-        outer_layout.setContentsMargins(0, 0, 0, 0)
-        outer_layout.setSpacing(0)
+        outer_layout.setContentsMargins(14, 18, 14, 16)
+        outer_layout.setSpacing(4)
+        brand = QLabel("◆  BAHATA ERP")
+        brand.setObjectName("sidebarBrand")
+        outer_layout.addWidget(brand)
+        company = QLabel("KILN OPERATIONS")
+        company.setObjectName("sidebarCompany")
+        outer_layout.addWidget(company)
+        outer_layout.addSpacing(22)
 
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setFrameShape(QFrame.NoFrame)
-        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        def section(title):
+            label = QLabel(title)
+            label.setObjectName("sidebarSection")
+            outer_layout.addWidget(label)
 
-        container = QWidget()
-        layout = QVBoxLayout(container)
-        layout.setContentsMargins(14, 16, 14, 16)
-        layout.setSpacing(12)
+        def item(title, slot, active=False):
+            button = QPushButton(title)
+            button.setObjectName("sidebarActive" if active else "sidebarItem")
+            button.setMinimumHeight(46)
+            button.clicked.connect(slot)
+            outer_layout.addWidget(button)
+            return button
 
-        # Brand Title Header
-        brand_label = QLabel("BAHTA ERP")
-        brand_label.setStyleSheet("font-size: 22px; font-weight: 900; color: #0284C7;")
-        layout.addWidget(brand_label)
-
-        # Section 1: MAIN MODULES
-        lbl_sec1 = QLabel("MAIN MODULES")
-        lbl_sec1.setStyleSheet("font-size: 11px; font-weight: 800; color: #94A3B8; margin-top: 10px;")
-        layout.addWidget(lbl_sec1)
-
-        self.btn_labour_nav = QPushButton("Labour / Party Master")
-        self.btn_labour_nav.setMinimumHeight(38)
-        self.btn_labour_nav.setStyleSheet(
-            "QPushButton { background-color: #0284C7; color: #FFFFFF; font-weight: 700; font-size: 13px; border-radius: 19px; text-align: left; padding-left: 16px; border: none; } "
-            "QPushButton:hover { background-color: #0369A1; }"
-        )
-        self.btn_labour_nav.clicked.connect(self.main_win.open_labour_master_tab)
-        layout.addWidget(self.btn_labour_nav)
-
-        self.btn_product_nav = QPushButton("Product Master")
-        self.btn_product_nav.setMinimumHeight(38)
-        self.btn_product_nav.setStyleSheet(
-            "QPushButton { background-color: #0284C7; color: #FFFFFF; font-weight: 700; font-size: 13px; border-radius: 19px; text-align: left; padding-left: 16px; border: none; } "
-            "QPushButton:hover { background-color: #0369A1; }"
-        )
-        self.btn_product_nav.clicked.connect(self.main_win.open_product_master_tab)
-        layout.addWidget(self.btn_product_nav)
-
-        self.btn_production_nav = QPushButton("Production Entry")
-        self.btn_production_nav.setMinimumHeight(38)
-        self.btn_production_nav.setStyleSheet(
-            "QPushButton { background-color: #0284C7; color: #FFFFFF; font-weight: 700; font-size: 13px; border-radius: 19px; text-align: left; padding-left: 16px; border: none; } "
-            "QPushButton:hover { background-color: #0369A1; }"
-        )
-        self.btn_production_nav.clicked.connect(self.main_win.open_production_entry_tab)
-        layout.addWidget(self.btn_production_nav)
-
-        self.btn_sales_nav = QPushButton("🧾 Sales Entry & Billing")
-        self.btn_sales_nav.setMinimumHeight(38)
-        self.btn_sales_nav.setStyleSheet(
-            "QPushButton { background-color: #0284C7; color: #FFFFFF; font-weight: 700; font-size: 13px; border-radius: 19px; text-align: left; padding-left: 16px; border: none; } "
-            "QPushButton:hover { background-color: #0369A1; }"
-        )
-        self.btn_sales_nav.clicked.connect(self.main_win.open_sales_entry_tab)
-        layout.addWidget(self.btn_sales_nav)
-
-        self.btn_rate_nav = QPushButton("Labour Rates")
-        self.btn_rate_nav.setMinimumHeight(38)
-        self.btn_rate_nav.setStyleSheet(
-            "QPushButton { background-color: #0284C7; color: #FFFFFF; font-weight: 700; font-size: 13px; border-radius: 19px; text-align: left; padding-left: 16px; border: none; } "
-            "QPushButton:hover { background-color: #0369A1; }"
-        )
-        self.btn_rate_nav.clicked.connect(self.main_win.open_labour_rate_tab)
-        layout.addWidget(self.btn_rate_nav)
-
-        self.btn_ledger_nav = QPushButton("📑 Customer & Labour Khata")
-        self.btn_ledger_nav.setMinimumHeight(38)
-        self.btn_ledger_nav.setStyleSheet(
-            "QPushButton { background-color: #0284C7; color: #FFFFFF; font-weight: 700; font-size: 13px; border-radius: 19px; text-align: left; padding-left: 16px; border: none; } "
-            "QPushButton:hover { background-color: #0369A1; }"
-        )
-        self.btn_ledger_nav.clicked.connect(self.main_win.open_labour_ledger_tab)
-        layout.addWidget(self.btn_ledger_nav)
-
-        self.btn_cash_nav = QPushButton("💰 Cash & Amdan / Akrajat")
-        self.btn_cash_nav.setMinimumHeight(38)
-        self.btn_cash_nav.setStyleSheet(
-            "QPushButton { background-color: #0284C7; color: #FFFFFF; font-weight: 700; font-size: 13px; border-radius: 19px; text-align: left; padding-left: 16px; border: none; } "
-            "QPushButton:hover { background-color: #0369A1; }"
-        )
-        self.btn_cash_nav.clicked.connect(self.main_win.open_money_transactions_tab)
-        layout.addWidget(self.btn_cash_nav)
-
-        # Section 3: SECURITY & AUDIT
-        lbl_sec2 = QLabel("SECURITY & AUDIT")
-        lbl_sec2.setStyleSheet("font-size: 11px; font-weight: 800; color: #94A3B8; margin-top: 14px;")
-        layout.addWidget(lbl_sec2)
-
+        section("WORKSPACE")
+        item("⌂  Dashboard", self.main_win.open_dashboard_tab, True)
+        section("OPERATIONS")
+        self.btn_labour_nav = item("♙  Labour & parties", self.main_win.open_labour_master_tab)
+        self.btn_product_nav = item("▦  Product master", self.main_win.open_product_master_tab)
+        self.btn_production_nav = item("⚒  Daily production", self.main_win.open_production_entry_tab)
+        self.btn_sales_nav = item("▤  Sales & billing", self.main_win.open_sales_entry_tab)
+        self.btn_rate_nav = item("₨  Labour rates", self.main_win.open_labour_rate_tab)
+        self.btn_ledger_nav = item("≡  Khata & ledgers", self.main_win.open_labour_ledger_tab)
+        self.btn_cash_nav = item("₨  Cashbook", self.main_win.open_money_transactions_tab)
         if current_session.is_admin:
-            self.btn_user_nav = QPushButton("User Security Mgmt")
-            self.btn_user_nav.setMinimumHeight(36)
-            self.btn_user_nav.setStyleSheet(
-                "QPushButton { background-color: #F8FAFC; color: #334155; font-weight: 600; font-size: 12px; border-radius: 18px; text-align: left; padding-left: 16px; border: 1px solid #CBD5E1; } "
-                "QPushButton:hover { background-color: #E2E8F0; color: #0F172A; }"
-            )
-            self.btn_user_nav.clicked.connect(self.main_win.open_user_management_tab)
-            layout.addWidget(self.btn_user_nav)
-
-        self.btn_audit_nav = QPushButton("👁️ Audit Trail Logs")
-        self.btn_audit_nav.setMinimumHeight(36)
-        self.btn_audit_nav.setStyleSheet(
-            "QPushButton { background-color: #F8FAFC; color: #334155; font-weight: 600; font-size: 12px; border-radius: 18px; text-align: left; padding-left: 16px; border: 1px solid #CBD5E1; } "
-            "QPushButton:hover { background-color: #E2E8F0; color: #0F172A; }"
-        )
-        self.btn_audit_nav.clicked.connect(self.main_win.open_audit_logs_tab)
-        layout.addWidget(self.btn_audit_nav)
-
-        layout.addStretch()
-
-        # Bottom Section: Logout Session Button
-        self.btn_logout = QPushButton("❌ Logout Session")
-        self.btn_logout.setMinimumHeight(38)
-        self.btn_logout.setStyleSheet(
-            "QPushButton { background-color: #E11D48; color: #FFFFFF; font-weight: 700; font-size: 13px; border-radius: 8px; border: none; } "
-            "QPushButton:hover { background-color: #BE123C; }"
-        )
-        self.btn_logout.clicked.connect(self.main_win._on_logout)
-        layout.addWidget(self.btn_logout)
-
-        scroll_area.setWidget(container)
-        outer_layout.addWidget(scroll_area)
+            section("CONTROL")
+            self.btn_user_nav = item("⚿  User security", self.main_win.open_user_management_tab)
+            self.btn_audit_nav = item("◉  Audit trail", self.main_win.open_audit_logs_tab)
+        outer_layout.addStretch()
+        logout = item("↪  Log out", self.main_win._on_logout)
+        logout.setObjectName("sidebarLogout")
 
 
 class DashboardWidget(QWidget):
@@ -394,7 +308,8 @@ class MainWindow(QMainWindow):
         self.showMaximized()
 
     def eventFilter(self, obj, event):
-        if event.type() in (QEvent.KeyPress, QEvent.MouseButtonPress, QEvent.MouseMove):
+        # Passive pointer movement must not keep an unattended financial session alive.
+        if event.type() in (QEvent.KeyPress, QEvent.MouseButtonPress, QEvent.Wheel):
             current_session.touch_activity()
         return super().eventFilter(obj, event)
 
@@ -478,15 +393,8 @@ class MainWindow(QMainWindow):
         self.dashboard_view = DashboardWidget(main_win=self)
         self.tab_widget.addTab(self.dashboard_view, "🏠 Dashboard")
 
-        # Labour Master Tab
-        self.labour_view = LabourMasterView()
-        self.labour_view.close_requested.connect(self.open_dashboard_tab)
-        self.tab_widget.addTab(self.labour_view, "🧱 Labour & Account Master")
-
-        # User Management Tab (if Admin)
-        if current_session.is_admin:
-            self.user_view = UserManagementView()
-            self.tab_widget.addTab(self.user_view, "👤 User Management")
+        # Heavy modules load only when selected. Creating the labour and user-management
+        # screens eagerly made startup noticeably slow on larger databases.
 
         main_hbox.addWidget(self.tab_widget, stretch=1)
         self.setCentralWidget(central_widget)
@@ -523,6 +431,9 @@ class MainWindow(QMainWindow):
         self.tab_widget.setCurrentWidget(view)
 
     def open_audit_logs_tab(self):
+        if not current_session.is_admin:
+            ToastNotification.show_error(self, "Access Denied", "Only Administrator can access Audit Trail Logs.")
+            return
         for idx in range(self.tab_widget.count()):
             if isinstance(self.tab_widget.widget(idx), AuditLogsView):
                 self.tab_widget.widget(idx).refresh_logs()

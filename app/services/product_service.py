@@ -3,7 +3,7 @@ from typing import List, Tuple, Dict, Any, Optional
 from app.database.connection import get_db_session
 from app.repositories.product_repository import ProductRepository
 from app.repositories.audit_repository import AuditRepository
-from app.security.rbac import can_delete_records
+from app.security.rbac import can_delete_records, require_authenticated
 from app.security.session import current_session
 from app.validators.product_validator import validate_product_data
 
@@ -114,6 +114,7 @@ class ProductService:
             }
 
     @staticmethod
+    @require_authenticated
     def save_product(
         data: Dict[str, Any],
         selected_category_ids: List[int],
@@ -154,6 +155,7 @@ class ProductService:
             return True, msg
 
     @staticmethod
+    @require_authenticated
     def delete_product(product_id: int) -> Tuple[bool, str]:
         if not can_delete_records():
             return False, "Access Denied: Only Administrator role is permitted to delete products."
@@ -167,6 +169,8 @@ class ProductService:
             product = repo.get_by_id(product_id)
             if not product:
                 return False, f"Product ID {product_id} not found."
+
+            p_name = product.ProductName
 
             core_system_prods = [
                 "Kacchi Brick (Pathera)", "Kacchi Brick (Bahari)",

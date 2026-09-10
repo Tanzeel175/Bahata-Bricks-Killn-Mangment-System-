@@ -6,7 +6,7 @@ from app.repositories.sales_repository import SalesRepository
 from app.repositories.labour_repository import LabourRepository
 from app.repositories.product_repository import ProductRepository
 from app.repositories.audit_repository import AuditRepository
-from app.security.rbac import can_delete_records
+from app.security.rbac import can_delete_records, require_authenticated
 from app.security.session import current_session
 
 
@@ -115,6 +115,7 @@ class SalesService:
             ]
 
     @staticmethod
+    @require_authenticated
     def save_sales_receipt(
         sale_date: date,
         customer_id: str,
@@ -257,6 +258,7 @@ class SalesService:
             return result
 
     @staticmethod
+    @require_authenticated
     def delete_sales_receipt(sale_id: int) -> Tuple[bool, str]:
         if not can_delete_records():
             return False, "Access Denied: Only System Administrators can delete sales receipts."

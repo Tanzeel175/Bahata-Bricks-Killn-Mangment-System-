@@ -1,7 +1,7 @@
 from datetime import date
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QDateEdit,
-    QPushButton, QFrame, QScrollArea, QSizePolicy
+    QPushButton, QFrame, QScrollArea, QSizePolicy, QListView
 )
 from PySide6.QtCore import Qt, QDate, Signal
 
@@ -9,6 +9,32 @@ from app.ui.components.toast import ToastNotification
 from app.services.ledger_service import LedgerService
 from app.ui.views.payment_dialog import RecordPaymentDialog
 from app.ui.views.ledger_report_window import LedgerReportWindow
+
+
+class ScrollableComboBox(QComboBox):
+    """
+    QComboBox enhanced with:
+    1. Dedicated QListView popup view supporting smooth mouse-wheel scrolling and dragging.
+    2. Direct mouse-wheel cycling through items even when hovering.
+    3. Expanded maxVisibleItems (15) so lists like 18+ categories display comfortably.
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        list_view = QListView(self)
+        list_view.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        list_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setView(list_view)
+        self.setMaxVisibleItems(15)
+
+    def wheelEvent(self, event):
+        delta = event.angleDelta().y()
+        if delta > 0:
+            if self.currentIndex() > 0:
+                self.setCurrentIndex(self.currentIndex() - 1)
+        elif delta < 0:
+            if self.currentIndex() < self.count() - 1:
+                self.setCurrentIndex(self.currentIndex() + 1)
+        event.accept()
 
 
 class LabourLedgerView(QWidget):
@@ -96,9 +122,20 @@ class LabourLedgerView(QWidget):
 
         combo_style = (
             "QComboBox { background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 6px; "
-            "padding: 5px 10px; font-size: 12px; font-weight: 600; color: #0F172A; min-height: 24px; } "
+            "padding: 5px 10px; font-size: 12px; font-weight: 600; color: #0F172A; min-height: 26px; } "
             "QComboBox:focus { border: 2px solid #0284C7; } "
-            "QComboBox::drop-down { border: none; width: 22px; }"
+            "QComboBox::drop-down { border: none; width: 24px; } "
+            "QComboBox QAbstractItemView { background-color: #FFFFFF; border: 1px solid #CBD5E1; "
+            "border-radius: 6px; selection-background-color: #0284C7; selection-color: #FFFFFF; "
+            "color: #0F172A; padding: 4px; outline: none; } "
+            "QComboBox QAbstractItemView::item { min-height: 28px; padding: 4px 8px; } "
+            "QComboBox QAbstractItemView QScrollBar:vertical { border: none; background: #F1F5F9; "
+            "width: 12px; margin: 2px; border-radius: 5px; } "
+            "QComboBox QAbstractItemView QScrollBar::handle:vertical { background: #94A3B8; "
+            "min-height: 24px; border-radius: 5px; } "
+            "QComboBox QAbstractItemView QScrollBar::handle:vertical:hover { background: #64748B; } "
+            "QComboBox QAbstractItemView QScrollBar::add-line:vertical, "
+            "QComboBox QAbstractItemView QScrollBar::sub-line:vertical { height: 0px; }"
         )
         date_style = (
             "QDateEdit { background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 6px; "
@@ -111,13 +148,13 @@ class LabourLedgerView(QWidget):
         # Row 0: Category & Worker
         lbl_cat = QLabel("Account Category (کھاتہ قسم):")
         lbl_cat.setStyleSheet(lbl_style)
-        self.cmb_category = QComboBox()
+        self.cmb_category = ScrollableComboBox()
         self.cmb_category.setStyleSheet(combo_style)
         self.cmb_category.currentTextChanged.connect(self._on_category_changed)
 
         lbl_worker = QLabel("Select Account / Customer / Labourer (کھاتہ دار):")
         lbl_worker.setStyleSheet(lbl_style)
-        self.cmb_worker = QComboBox()
+        self.cmb_worker = ScrollableComboBox()
         self.cmb_worker.setStyleSheet(combo_style)
         self.cmb_worker.currentIndexChanged.connect(self._on_worker_changed)
 
