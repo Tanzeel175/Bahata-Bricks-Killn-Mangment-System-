@@ -31,11 +31,11 @@ class AuditLogsView(QWidget):
         header_box = QHBoxLayout()
         title_box = QVBoxLayout()
 
-        title = QLabel("🛡️ Audit Trail Logs & System History")
-        title.setStyleSheet("font-size: 20px; font-weight: 800; color: #0F172A;")
+        title = QLabel("Audit Trail Logs & System History")
+        title.setProperty("role", "heading-1")
 
         sub = QLabel("Read-Only immutable security ledger, access history, and data modification audit trail.")
-        sub.setStyleSheet("font-size: 12px; color: #64748B;")
+        sub.setProperty("role", "subtext")
 
         title_box.addWidget(title)
         title_box.addWidget(sub)
@@ -43,18 +43,13 @@ class AuditLogsView(QWidget):
         header_box.addStretch()
 
         # Action Buttons in Header
-        self.btn_refresh = QPushButton("🔄 Refresh Logs")
-        self.btn_refresh.setStyleSheet(
-            "QPushButton { background-color: #0284C7; color: #FFFFFF; font-weight: 700; border-radius: 6px; padding: 6px 14px; border: none; } "
-            "QPushButton:hover { background-color: #0369A1; }"
-        )
+        self.btn_refresh = QPushButton("Refresh Logs")
+        self.btn_refresh.setMinimumHeight(32)
         self.btn_refresh.clicked.connect(self.refresh_logs)
 
-        self.btn_export = QPushButton("📊 Export Excel")
-        self.btn_export.setStyleSheet(
-            "QPushButton { background-color: #059669; color: #FFFFFF; font-weight: 700; border-radius: 6px; padding: 6px 14px; border: none; } "
-            "QPushButton:hover { background-color: #047857; }"
-        )
+        self.btn_export = QPushButton("Export Excel")
+        self.btn_export.setProperty("class", "btn-primary")
+        self.btn_export.setMinimumHeight(32)
         self.btn_export.clicked.connect(self._on_export_excel)
 
         header_box.addWidget(self.btn_refresh)
@@ -63,14 +58,12 @@ class AuditLogsView(QWidget):
 
         # 2. FILTER CONTROLS CARD
         filter_card = QFrame()
-        filter_card.setStyleSheet(
-            "QFrame { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px; }"
-        )
+        filter_card.setProperty("class", "card-panel")
         f_layout = QHBoxLayout(filter_card)
         f_layout.setSpacing(12)
 
         lbl_cat = QLabel("Action Filter:")
-        lbl_cat.setStyleSheet("font-weight: 700; color: #334155; font-size: 12px; border: none; background: transparent;")
+        lbl_cat.setProperty("class", "heading-secondary")
 
         self.cmb_action_filter = QComboBox()
         self.cmb_action_filter.setMinimumHeight(30)
@@ -97,9 +90,7 @@ class AuditLogsView(QWidget):
 
         # 3. READ-ONLY DATA TABLE CARD
         table_card = QFrame()
-        table_card.setStyleSheet(
-            "QFrame { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 8px; }"
-        )
+        table_card.setProperty("class", "card-panel")
         t_layout = QVBoxLayout(table_card)
 
         self.table = QTableWidget()

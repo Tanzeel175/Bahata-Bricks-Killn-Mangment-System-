@@ -2,7 +2,7 @@ from functools import wraps
 from app.security.session import current_session
 
 
-class PermissionError(Exception):
+class RBACPermissionError(Exception):
     """Raised when an unprivileged user attempts an authorized action."""
     pass
 
@@ -12,7 +12,7 @@ def require_authenticated(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         if not current_session.is_authenticated:
-            raise PermissionError("User is not authenticated.")
+            raise RBACPermissionError("User is not authenticated.")
         current_session.touch_activity()
         return func(*args, **kwargs)
     return wrapper
@@ -24,10 +24,10 @@ def require_role(*allowed_roles: str):
         @wraps(func)
         def wrapper(*args, **kwargs):
             if not current_session.is_authenticated:
-                raise PermissionError("User is not authenticated.")
+                raise RBACPermissionError("User is not authenticated.")
             current_session.touch_activity()
             if current_session.role_name not in allowed_roles:
-                raise PermissionError(
+                raise RBACPermissionError(
                     f"Access Denied: Action requires one of {allowed_roles} roles. "
                     f"Current role: '{current_session.role_name}'."
                 )
@@ -49,3 +49,4 @@ def can_delete_records() -> bool:
 def can_manage_users() -> bool:
     """Munshi cannot create or manage user accounts."""
     return current_session.is_admin
+

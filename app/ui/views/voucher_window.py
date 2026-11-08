@@ -25,7 +25,7 @@ class VoucherWindow(QDialog):
         t_no = txn_data.get("TransactionNo", "TXN")
         t_title = "Cash Receipt (رسید وصولی)" if t_type == "RECEIPT" else "Cash Payment Voucher (واؤچر ادائیگی)"
 
-        self.setWindowTitle(f"📄 {t_title} — {t_no}")
+        self.setWindowTitle(f"{t_title} — {t_no}")
         self.resize(850, 720)
         self.setMinimumSize(700, 550)
         self.setStyleSheet("QDialog { background-color: #F8FAFC; }")
@@ -41,20 +41,20 @@ class VoucherWindow(QDialog):
 
         # 1. Top Action Toolbar
         tb_frame = QFrame()
-        tb_frame.setStyleSheet(
-            "QFrame { background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 8px; padding: 6px; }"
-        )
+        tb_frame.setObjectName("toolbar_frame")
+        tb_frame.setProperty("class", "card-panel")
         tb_layout = QHBoxLayout(tb_frame)
-        tb_layout.setContentsMargins(8, 4, 8, 4)
+        tb_layout.setContentsMargins(8, 6, 8, 6)
         tb_layout.setSpacing(10)
 
-        lbl_doc = QLabel("📋 Printable A4 Voucher Preview")
-        lbl_doc.setStyleSheet("font-size: 13px; font-weight: 800; color: #1E293B;")
+        lbl_doc = QLabel("Printable A4 Voucher Preview")
+        lbl_doc.setProperty("class", "heading-secondary")
+        lbl_doc.setStyleSheet("font-size: 13px; font-weight: 800;")
         tb_layout.addWidget(lbl_doc)
         tb_layout.addStretch()
 
         # Zoom Controls
-        self.btn_zoom_out = QPushButton("🔍 -")
+        self.btn_zoom_out = QPushButton("Zoom -")
         self.btn_zoom_out.setToolTip("Zoom Out")
         self.btn_zoom_out.setStyleSheet(
             "QPushButton { background-color: #F1F5F9; color: #334155; font-weight: 700; font-size: 12px; border-radius: 6px; padding: 6px 12px; border: 1px solid #CBD5E1; } "
@@ -68,7 +68,7 @@ class VoucherWindow(QDialog):
         self.lbl_zoom.setAlignment(Qt.AlignCenter)
         tb_layout.addWidget(self.lbl_zoom)
 
-        self.btn_zoom_in = QPushButton("🔍 +")
+        self.btn_zoom_in = QPushButton("Zoom +")
         self.btn_zoom_in.setToolTip("Zoom In")
         self.btn_zoom_in.setStyleSheet(
             "QPushButton { background-color: #F1F5F9; color: #334155; font-weight: 700; font-size: 12px; border-radius: 6px; padding: 6px 12px; border: 1px solid #CBD5E1; } "
@@ -78,7 +78,7 @@ class VoucherWindow(QDialog):
         tb_layout.addWidget(self.btn_zoom_in)
 
         # Print Button
-        self.btn_print = QPushButton("🖨️ Print Voucher")
+        self.btn_print = QPushButton("Print Voucher")
         self.btn_print.setStyleSheet(
             "QPushButton { background-color: #0284C7; color: #FFFFFF; font-weight: 700; font-size: 12px; border-radius: 6px; padding: 6px 16px; border: none; } "
             "QPushButton:hover { background-color: #0369A1; }"
@@ -87,7 +87,7 @@ class VoucherWindow(QDialog):
         tb_layout.addWidget(self.btn_print)
 
         # PDF Export Button
-        self.btn_pdf = QPushButton("📄 Save as PDF")
+        self.btn_pdf = QPushButton("Save as PDF")
         self.btn_pdf.setStyleSheet(
             "QPushButton { background-color: #16A34A; color: #FFFFFF; font-weight: 700; font-size: 12px; border-radius: 6px; padding: 6px 16px; border: none; } "
             "QPushButton:hover { background-color: #15803D; }"
@@ -96,7 +96,7 @@ class VoucherWindow(QDialog):
         tb_layout.addWidget(self.btn_pdf)
 
         # Close Button
-        self.btn_close = QPushButton("✖ Close")
+        self.btn_close = QPushButton("Close")
         self.btn_close.setStyleSheet(
             "QPushButton { background-color: #F1F5F9; color: #475569; font-weight: 700; font-size: 12px; border-radius: 6px; padding: 6px 14px; border: 1px solid #CBD5E1; } "
             "QPushButton:hover { background-color: #E2E8F0; }"
@@ -110,7 +110,7 @@ class VoucherWindow(QDialog):
         self.text_browser = QTextBrowser()
         self.text_browser.setOpenExternalLinks(False)
         self.text_browser.setStyleSheet(
-            "QTextBrowser { background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 8px; padding: 20px; }"
+            "QTextBrowser { background-color: #FFFFFF; color: #0F172A; border: 1px solid #CBD5E1; border-radius: 8px; padding: 20px; }"
         )
         main_layout.addWidget(self.text_browser)
 

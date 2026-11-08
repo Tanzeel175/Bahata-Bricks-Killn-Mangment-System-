@@ -1,6 +1,7 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Optional, List, Dict, Any
 from sqlalchemy import func, or_
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 from app.database.schema import MoneyTransaction, LabourAccount, AccountType
 from app.repositories.base_repository import BaseRepository
@@ -23,27 +24,26 @@ class TransactionRepository(BaseRepository[MoneyTransaction]):
         """
         prefix = "RCT" if (txn_type or "").upper() in ("RECEIPT", "AMDAN") else "PAY"
         
-        # Query highest ID for this prefix
-        last_txn = (
-            self.session.query(MoneyTransaction)
+        # Query all existing TransactionNo with this prefix to find the true max numeric sequence
+        txns = (
+            self.session.query(MoneyTransaction.TransactionNo)
             .filter(MoneyTransaction.TransactionNo.like(f"{prefix}-%"))
-            .order_by(MoneyTransaction.TransactionID.desc())
-            .first()
+            .all()
         )
 
-        seq = 1
-        if last_txn and last_txn.TransactionNo:
-            try:
-                parts = last_txn.TransactionNo.split("-")
-                if len(parts) == 2 and parts[1].isdigit():
-                    seq = int(parts[1]) + 1
-            except Exception:
-                seq = (last_txn.TransactionID or 0) + 1
-        else:
-            # Fallback to total count + 1
-            cnt = self.session.query(MoneyTransaction).filter(MoneyTransaction.TransactionType == txn_type).count()
-            seq = cnt + 1
+        max_seq = 0
+        for (t_no,) in txns:
+            if t_no:
+                try:
+                    parts = t_no.split("-")
+                    if len(parts) == 2 and parts[1].isdigit():
+                        num = int(parts[1])
+                        if num > max_seq:
+                            max_seq = num
+                except Exception:
+                    pass
 
+        seq = max_seq + 1
         return f"{prefix}-{seq:06d}"
 
     def get_by_account(
@@ -73,7 +73,8 @@ class TransactionRepository(BaseRepository[MoneyTransaction]):
         account_id: Optional[str] = None,
         payment_method: Optional[str] = None,
         search_query: Optional[str] = None,
-        include_deleted: bool = False
+        include_deleted: bool = False,
+        limit: Optional[int] = None
     ) -> List[MoneyTransaction]:
         """Search and filter transactions with eager loaded account details."""
         q = (
@@ -110,7 +111,103 @@ class TransactionRepository(BaseRepository[MoneyTransaction]):
                 )
             )
 
-        return q.order_by(MoneyTransaction.TransactionDate.desc(), MoneyTransaction.TransactionID.desc()).all()
+        q = q.order_by(MoneyTransaction.TransactionDate.desc(), MoneyTransaction.TransactionID.desc())
+        if limit and limit > 0:
+            q = q.limit(limit)
+        return q.all()
+
+    def get_by_id_or_no(self, identifier: str, preferred_type: Optional[str] = None) -> Optional[MoneyTransaction]:
+        """
+        Lookup a transaction by TransactionNo (e.g. RCT-000005, PAY-000005, or entry number '5'),
+        or fallback to internal TransactionID.
+        If a pure number (e.g. '5') is entered:
+        1. Check TransactionNo formatted with preferred_type prefix (e.g. 'RCT-000005' or 'PAY-000005')
+        2. Check the other type prefix (e.g. 'PAY-000005' or 'RCT-000005')
+        3. Check exact TransactionID
+        """
+        if not identifier:
+            return None
+        cleaned = identifier.strip().upper()
+        q = (
+            self.session.query(MoneyTransaction)
+            .join(LabourAccount, MoneyTransaction.AccountID == LabourAccount.WorkerID)
+            .options(joinedload(MoneyTransaction.account).joinedload(LabourAccount.account_type))
+            .filter(MoneyTransaction.IsDeleted == False)
+        )
+
+        # 1. Exact match on TransactionNo (case-insensitive)
+        txn = q.filter(func.upper(MoneyTransaction.TransactionNo) == cleaned).first()
+        if txn:
+            return txn
+
+        # 2. Check if user typed variations like "RCT-5", "PAY-5", "RCT5", "PAY 5"
+        import re
+        m = re.match(r"^(RCT|PAY)[\s\-_]*(\d+)$", cleaned, re.IGNORECASE)
+        if m:
+            prefix = m.group(1).upper()
+            num = int(m.group(2))
+            formatted_no = f"{prefix}-{num:06d}"
+            txn = q.filter(MoneyTransaction.TransactionNo == formatted_no).first()
+            if txn:
+                return txn
+
+        # 3. If cleaned is pure digits (e.g. "5"):
+        # Users consider this Entry #5, which corresponds to TransactionNo suffix 000005!
+        if cleaned.isdigit():
+            num = int(cleaned)
+            formatted_suffix = f"{num:06d}"
+
+            # If preferred_type is given ("RECEIPT" or "PAYMENT"), try that prefix first
+            if preferred_type:
+                pref_prefix = "RCT" if preferred_type.upper() == "RECEIPT" else "PAY"
+                txn = q.filter(MoneyTransaction.TransactionNo == f"{pref_prefix}-{formatted_suffix}").first()
+                if txn:
+                    return txn
+                # Try the other prefix
+                alt_prefix = "PAY" if pref_prefix == "RCT" else "RCT"
+                txn = q.filter(MoneyTransaction.TransactionNo == f"{alt_prefix}-{formatted_suffix}").first()
+                if txn:
+                    return txn
+            else:
+                # No preference: try RCT first, then PAY
+                txn = q.filter(MoneyTransaction.TransactionNo == f"RCT-{formatted_suffix}").first()
+                if txn:
+                    return txn
+                txn = q.filter(MoneyTransaction.TransactionNo == f"PAY-{formatted_suffix}").first()
+                if txn:
+                    return txn
+
+            # Check if any TransactionNo ends with this number
+            txn = q.filter(MoneyTransaction.TransactionNo.like(f"%-{formatted_suffix}")).first()
+            if txn:
+                return txn
+
+            # Finally, fall back to internal TransactionID
+            txn = q.filter(MoneyTransaction.TransactionID == num).first()
+            if txn:
+                return txn
+
+        # 4. Partial substring match on TransactionNo
+        return q.filter(MoneyTransaction.TransactionNo.ilike(f"%{cleaned}%")).first()
+
+    def get_adjacent_transaction_id(self, current_id: Optional[int], direction: str = "prev") -> Optional[int]:
+        """
+        Get the ID of the adjacent non-deleted transaction.
+        direction="prev": highest TransactionID < current_id (or latest overall if current_id is None)
+        direction="next": lowest TransactionID > current_id
+        """
+        q = self.session.query(MoneyTransaction.TransactionID).filter(MoneyTransaction.IsDeleted == False)
+        if direction == "prev":
+            if current_id is not None:
+                q = q.filter(MoneyTransaction.TransactionID < current_id)
+            row = q.order_by(MoneyTransaction.TransactionID.desc()).first()
+            return row[0] if row else None
+        else:
+            if current_id is None:
+                return None
+            row = q.filter(MoneyTransaction.TransactionID > current_id).order_by(MoneyTransaction.TransactionID.asc()).first()
+            return row[0] if row else None
+
 
     def get_cash_summary(self, as_of_date: Optional[date] = None) -> Dict[str, float]:
         """
@@ -176,7 +273,7 @@ class TransactionRepository(BaseRepository[MoneyTransaction]):
         txn_date: date,
         account_id: str,
         amount: float,
-        description: str,
+        description: Optional[str] = "",
         payment_method: str = "Cash",
         bank_account: Optional[str] = None,
         cheque_number: Optional[str] = None,
@@ -184,26 +281,33 @@ class TransactionRepository(BaseRepository[MoneyTransaction]):
         reference_id: Optional[str] = None,
         user_name: str = "System"
     ) -> MoneyTransaction:
-        txn = MoneyTransaction(
-            TransactionNo=txn_no,
-            TransactionType=txn_type.upper(),
-            TransactionDate=txn_date,
-            AccountID=account_id,
-            Amount=amount,
-            Description=description,
-            PaymentMethod=payment_method,
-            BankAccount=bank_account,
-            ChequeNumber=cheque_number,
-            ReferenceType=reference_type,
-            ReferenceID=reference_id,
-            CreatedBy=user_name,
-            CreatedDate=datetime.utcnow(),
-            ModifiedDate=datetime.utcnow(),
-            IsDeleted=False
-        )
-        self.session.add(txn)
-        self.session.flush()
-        return txn
+        now = datetime.now(timezone.utc)
+        for _attempt in range(3):
+            txn = MoneyTransaction(
+                TransactionNo=txn_no,
+                TransactionType=txn_type.upper(),
+                TransactionDate=txn_date,
+                AccountID=account_id,
+                Amount=amount,
+                Description=(description or "").strip(),
+                PaymentMethod=payment_method,
+                BankAccount=bank_account,
+                ChequeNumber=cheque_number,
+                ReferenceType=reference_type,
+                ReferenceID=reference_id,
+                CreatedBy=user_name,
+                CreatedDate=now,
+                ModifiedDate=now,
+                IsDeleted=False
+            )
+            try:
+                self.session.add(txn)
+                self.session.flush()
+                return txn
+            except IntegrityError:
+                self.session.rollback()
+                txn_no = self.get_next_transaction_no(txn_type)
+        raise RuntimeError(f"Failed to generate unique transaction number after 3 retries.")
 
     def update_transaction(
         self,
@@ -226,14 +330,14 @@ class TransactionRepository(BaseRepository[MoneyTransaction]):
         txn.TransactionDate = txn_date
         txn.AccountID = account_id
         txn.Amount = amount
-        txn.Description = description
+        txn.Description = (description or "").strip()
         txn.PaymentMethod = payment_method
         txn.BankAccount = bank_account
         txn.ChequeNumber = cheque_number
         txn.ReferenceType = reference_type
         txn.ReferenceID = reference_id
         txn.ModifiedBy = user_name
-        txn.ModifiedDate = datetime.utcnow()
+        txn.ModifiedDate = datetime.now(timezone.utc)
         self.session.flush()
         return txn
 
@@ -244,6 +348,6 @@ class TransactionRepository(BaseRepository[MoneyTransaction]):
 
         txn.IsDeleted = True
         txn.ModifiedBy = user_name
-        txn.ModifiedDate = datetime.utcnow()
+        txn.ModifiedDate = datetime.now(timezone.utc)
         self.session.flush()
         return True

@@ -30,7 +30,7 @@ class AccountTypeManagementDialog(QDialog):
         self.type_input = QLineEdit()
         self.type_input.setPlaceholderText("Enter new account category name...")
 
-        self.btn_add = QPushButton("➕ Add Category")
+        self.btn_add = QPushButton("+ Add Category")
         self.btn_add.setProperty("class", "btn-primary")
         self.btn_add.clicked.connect(self._on_add_type)
 

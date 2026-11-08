@@ -9,6 +9,8 @@ from app.ui.components.toast import ToastNotification
 from app.services.ledger_service import LedgerService
 from app.ui.views.payment_dialog import RecordPaymentDialog
 from app.ui.views.ledger_report_window import LedgerReportWindow
+from app.ui.styles import configure_date_edit
+from app.ui.theme_manager import theme_mgr
 
 
 class ScrollableComboBox(QComboBox):
@@ -27,14 +29,10 @@ class ScrollableComboBox(QComboBox):
         self.setMaxVisibleItems(15)
 
     def wheelEvent(self, event):
-        delta = event.angleDelta().y()
-        if delta > 0:
-            if self.currentIndex() > 0:
-                self.setCurrentIndex(self.currentIndex() - 1)
-        elif delta < 0:
-            if self.currentIndex() < self.count() - 1:
-                self.setCurrentIndex(self.currentIndex() + 1)
-        event.accept()
+        if self.view().isVisible():
+            super().wheelEvent(event)
+        else:
+            event.ignore()
 
 
 class LabourLedgerView(QWidget):
@@ -50,6 +48,7 @@ class LabourLedgerView(QWidget):
         super().__init__(parent)
         self._init_ui()
         self._load_categories()
+        theme_mgr.theme_changed.connect(self._on_theme_changed)
 
     def _init_ui(self):
         root_layout = QVBoxLayout(self)
@@ -62,20 +61,21 @@ class LabourLedgerView(QWidget):
         scroll_area.setFrameShape(QFrame.NoFrame)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        scroll_area.setStyleSheet("QScrollArea { background-color: #F8FAFC; border: none; }")
+        scroll_area.setStyleSheet("QScrollArea { background-color: transparent; border: none; }")
 
         # Outer centering container
         outer_container = QWidget()
-        outer_container.setStyleSheet("QWidget { background-color: transparent; }")
+        outer_container.setObjectName("ledgerOuterContainer")
+        outer_container.setStyleSheet("#ledgerOuterContainer { background-color: transparent; }")
         outer_layout = QVBoxLayout(outer_container)
         outer_layout.setContentsMargins(14, 10, 14, 14)
         outer_layout.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
 
-        # Centered Panel with comfortable max width (760px)
+        # Centered Panel with comfortable width that fits laptops
         panel = QWidget()
-        panel.setMaximumWidth(760)
+        panel.setMaximumWidth(820)
         panel.setMinimumWidth(320)
-        panel.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
+        panel.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         panel_layout = QVBoxLayout(panel)
         panel_layout.setContentsMargins(0, 0, 0, 0)
         panel_layout.setSpacing(10)
@@ -83,14 +83,14 @@ class LabourLedgerView(QWidget):
         # 2. Header Banner Card
         header_frame = QFrame()
         header_frame.setStyleSheet(
-            "QFrame { background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #1E3A8A, stop:1 #2563EB); "
-            "border-radius: 10px; padding: 12px 18px; }"
+            "QFrame { background-color: #0F172A; "
+            "border: 1px solid #1E293B; border-radius: 8px; padding: 12px 18px; }"
         )
         h_vbox = QVBoxLayout(header_frame)
         h_vbox.setContentsMargins(0, 0, 0, 0)
         h_vbox.setSpacing(4)
 
-        title = QLabel("📑 Customer & Labour Khata Ledger (کسٹمر اور لیبر کھاتہ)")
+        title = QLabel("Customer & Labour Khata Ledger (کسٹمر اور لیبر کھاتہ)")
         title.setStyleSheet("font-size: 17px; font-weight: 800; color: #FFFFFF;")
         subtitle = QLabel("Generate, print, and export professional A4 Khata statements for Customers & Labour accounts.")
         subtitle.setWordWrap(True)
@@ -101,17 +101,15 @@ class LabourLedgerView(QWidget):
 
         # 3. Criteria & Date Range Selection Card
         criteria_card = QFrame()
-        criteria_card.setStyleSheet(
-            "QFrame#criteriaCard { background-color: #FFFFFF; border: 1px solid #CBD5E1; "
-            "border-radius: 10px; padding: 14px 18px; }"
-        )
         criteria_card.setObjectName("criteriaCard")
+        criteria_card.setProperty("class", "card-panel")
         c_layout = QVBoxLayout(criteria_card)
-        c_layout.setContentsMargins(2, 2, 2, 2)
+        c_layout.setContentsMargins(14, 14, 14, 14)
         c_layout.setSpacing(10)
 
-        card_title = QLabel("🎯 Select Account & Date Range (کھاتہ اور تاریخ کا انتخاب)")
-        card_title.setStyleSheet("font-size: 14px; font-weight: 800; color: #0F172A; border: none; background: transparent;")
+        card_title = QLabel("Select Account & Date Range (کھاتہ اور تاریخ کا انتخاب)")
+        card_title.setProperty("class", "heading-secondary")
+        card_title.setStyleSheet("font-size: 14px; font-weight: 800; border: none; background: transparent;")
         c_layout.addWidget(card_title)
 
         # Form Grid Layout (2x2)
@@ -120,30 +118,9 @@ class LabourLedgerView(QWidget):
         form_grid.setHorizontalSpacing(16)
         form_grid.setVerticalSpacing(8)
 
-        combo_style = (
-            "QComboBox { background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 6px; "
-            "padding: 5px 10px; font-size: 12px; font-weight: 600; color: #0F172A; min-height: 26px; } "
-            "QComboBox:focus { border: 2px solid #0284C7; } "
-            "QComboBox::drop-down { border: none; width: 24px; } "
-            "QComboBox QAbstractItemView { background-color: #FFFFFF; border: 1px solid #CBD5E1; "
-            "border-radius: 6px; selection-background-color: #0284C7; selection-color: #FFFFFF; "
-            "color: #0F172A; padding: 4px; outline: none; } "
-            "QComboBox QAbstractItemView::item { min-height: 28px; padding: 4px 8px; } "
-            "QComboBox QAbstractItemView QScrollBar:vertical { border: none; background: #F1F5F9; "
-            "width: 12px; margin: 2px; border-radius: 5px; } "
-            "QComboBox QAbstractItemView QScrollBar::handle:vertical { background: #94A3B8; "
-            "min-height: 24px; border-radius: 5px; } "
-            "QComboBox QAbstractItemView QScrollBar::handle:vertical:hover { background: #64748B; } "
-            "QComboBox QAbstractItemView QScrollBar::add-line:vertical, "
-            "QComboBox QAbstractItemView QScrollBar::sub-line:vertical { height: 0px; }"
-        )
-        date_style = (
-            "QDateEdit { background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 6px; "
-            "padding: 5px 10px; font-size: 12px; font-weight: 600; color: #0F172A; min-height: 24px; } "
-            "QDateEdit:focus { border: 2px solid #0284C7; } "
-            "QDateEdit::drop-down { border: none; width: 22px; }"
-        )
-        lbl_style = "font-weight: 700; font-size: 11px; color: #334155; border: none; background: transparent;"
+        combo_style = "QComboBox { font-size: 12px; font-weight: 600; min-height: 28px; }"
+        date_style = "QDateEdit { font-size: 12.5px; font-weight: 600; min-height: 30px; min-width: 125px; }"
+        lbl_style = "font-weight: 700; font-size: 11px; border: none; background: transparent;"
 
         # Row 0: Category & Worker
         lbl_cat = QLabel("Account Category (کھاتہ قسم):")
@@ -167,8 +144,7 @@ class LabourLedgerView(QWidget):
         lbl_from = QLabel("From Date (تاریخ آغاز):")
         lbl_from.setStyleSheet(lbl_style)
         self.dt_from = QDateEdit()
-        self.dt_from.setCalendarPopup(True)
-        self.dt_from.setDisplayFormat("yyyy-MM-dd")
+        configure_date_edit(self.dt_from, min_width=125, min_height=30)
         self.dt_from.setStyleSheet(date_style)
         today = QDate.currentDate()
         self.dt_from.setDate(QDate(today.year(), today.month(), 1))
@@ -176,8 +152,7 @@ class LabourLedgerView(QWidget):
         lbl_to = QLabel("To Date (تاریخ اختتام):")
         lbl_to.setStyleSheet(lbl_style)
         self.dt_to = QDateEdit()
-        self.dt_to.setCalendarPopup(True)
-        self.dt_to.setDisplayFormat("yyyy-MM-dd")
+        configure_date_edit(self.dt_to, min_width=125, min_height=30)
         self.dt_to.setDate(today)
         self.dt_to.setStyleSheet(date_style)
 
@@ -228,102 +203,96 @@ class LabourLedgerView(QWidget):
 
         # 4. Selected Labourer / Account Details Card
         info_card = QFrame()
-        info_card.setStyleSheet(
-            "QFrame#infoCard { background-color: #FFFFFF; border: 1px solid #E2E8F0; "
-            "border-radius: 10px; padding: 12px 16px; }"
-        )
         info_card.setObjectName("infoCard")
+        info_card.setProperty("class", "card-panel")
         info_vlayout = QVBoxLayout(info_card)
-        info_vlayout.setContentsMargins(2, 2, 2, 2)
+        info_vlayout.setContentsMargins(14, 14, 14, 14)
         info_vlayout.setSpacing(8)
 
         info_header_row = QHBoxLayout()
         info_header_row.setContentsMargins(0, 0, 0, 0)
-        info_title = QLabel("👤 Selected Account & Live Khata Balance")
-        info_title.setStyleSheet("font-size: 13px; font-weight: 800; color: #1E293B; border: none; background: transparent;")
+        info_title = QLabel("Selected Account & Live Khata Balance")
+        info_title.setProperty("class", "heading-secondary")
+        info_title.setStyleSheet("font-size: 13px; font-weight: 800; border: none; background: transparent;")
         info_header_row.addWidget(info_title)
         info_header_row.addStretch()
 
-        self.btn_refresh = QPushButton("🔄 Refresh (تازہ کریں)")
+        self.btn_refresh = QPushButton("Refresh (تازہ کریں)")
         self.btn_refresh.setCursor(Qt.PointingHandCursor)
         self.btn_refresh.setToolTip("Reload Khata balance & latest entries from database")
-        self.btn_refresh.setStyleSheet(
-            "QPushButton { background-color: #F1F5F9; color: #0284C7; font-weight: 700; font-size: 11px; "
-            "border: 1px solid #BAE6FD; border-radius: 6px; padding: 3px 10px; } "
-            "QPushButton:hover { background-color: #E0F2FE; }"
-        )
+        self.btn_refresh.setProperty("class", "btn-secondary")
         self.btn_refresh.clicked.connect(self.refresh_view)
         info_header_row.addWidget(self.btn_refresh)
 
         self.lbl_info_balance = QLabel("Balance: Loading...")
         self.lbl_info_balance.setStyleSheet(
-            "font-size: 12px; font-weight: 800; color: #0284C7; background-color: #F0F9FF; "
+            "font-size: 12px; font-weight: 800; color: #0284C7; "
             "border: 1px solid #BAE6FD; border-radius: 6px; padding: 3px 10px;"
         )
         info_header_row.addWidget(self.lbl_info_balance)
         info_vlayout.addLayout(info_header_row)
 
-        # Details Grid (Compact 4-column item strip)
-        info_grid = QHBoxLayout()
-        info_grid.setSpacing(8)
+        # Details Grid (Clean 2x2 Grid Layout with generous breathing room)
+        from PySide6.QtWidgets import QGridLayout
+        info_grid = QGridLayout()
+        info_grid.setHorizontalSpacing(12)
+        info_grid.setVerticalSpacing(8)
 
         # Stat Item 1: Name
-        box_name = QFrame()
-        box_name.setStyleSheet("QFrame { background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 6px 8px; }")
-        bn_layout = QVBoxLayout(box_name)
-        bn_layout.setContentsMargins(0, 0, 0, 0)
+        self.box_name = QFrame()
+        bn_layout = QVBoxLayout(self.box_name)
+        bn_layout.setContentsMargins(8, 6, 8, 6)
         bn_layout.setSpacing(2)
         lbl_h_name = QLabel("Account Name:")
-        lbl_h_name.setStyleSheet("font-size: 10px; font-weight: 600; color: #64748B; border: none;")
+        lbl_h_name.setStyleSheet("font-size: 10px; font-weight: 600; border: none;")
         self.lbl_info_name = QLabel("—")
-        self.lbl_info_name.setStyleSheet("font-size: 12px; font-weight: 800; color: #0F172A; border: none;")
+        self.lbl_info_name.setStyleSheet("font-size: 13px; font-weight: 800; border: none;")
         bn_layout.addWidget(lbl_h_name)
         bn_layout.addWidget(self.lbl_info_name)
 
         # Stat Item 2: Worker ID
-        box_id = QFrame()
-        box_id.setStyleSheet("QFrame { background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 6px 8px; }")
-        bi_layout = QVBoxLayout(box_id)
-        bi_layout.setContentsMargins(0, 0, 0, 0)
+        self.box_id = QFrame()
+        bi_layout = QVBoxLayout(self.box_id)
+        bi_layout.setContentsMargins(8, 6, 8, 6)
         bi_layout.setSpacing(2)
         lbl_h_id = QLabel("Account ID:")
-        lbl_h_id.setStyleSheet("font-size: 10px; font-weight: 600; color: #64748B; border: none;")
+        lbl_h_id.setStyleSheet("font-size: 10px; font-weight: 600; border: none;")
         self.lbl_info_id = QLabel("—")
-        self.lbl_info_id.setStyleSheet("font-size: 12px; font-weight: 800; color: #0284C7; border: none;")
+        self.lbl_info_id.setStyleSheet("font-size: 13px; font-weight: 800; color: #0284C7; border: none;")
         bi_layout.addWidget(lbl_h_id)
         bi_layout.addWidget(self.lbl_info_id)
 
         # Stat Item 3: CNIC
-        box_cnic = QFrame()
-        box_cnic.setStyleSheet("QFrame { background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 6px 8px; }")
-        bc_layout = QVBoxLayout(box_cnic)
-        bc_layout.setContentsMargins(0, 0, 0, 0)
+        self.box_cnic = QFrame()
+        bc_layout = QVBoxLayout(self.box_cnic)
+        bc_layout.setContentsMargins(8, 6, 8, 6)
         bc_layout.setSpacing(2)
         lbl_h_cnic = QLabel("CNIC Number:")
-        lbl_h_cnic.setStyleSheet("font-size: 10px; font-weight: 600; color: #64748B; border: none;")
+        lbl_h_cnic.setStyleSheet("font-size: 10px; font-weight: 600; border: none;")
         self.lbl_info_cnic = QLabel("—")
-        self.lbl_info_cnic.setStyleSheet("font-size: 11px; font-weight: 700; color: #334155; border: none;")
+        self.lbl_info_cnic.setStyleSheet("font-size: 11.5px; font-weight: 700; border: none;")
         bc_layout.addWidget(lbl_h_cnic)
         bc_layout.addWidget(self.lbl_info_cnic)
 
         # Stat Item 4: Mobile
-        box_mob = QFrame()
-        box_mob.setStyleSheet("QFrame { background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 6px 8px; }")
-        bm_layout = QVBoxLayout(box_mob)
-        bm_layout.setContentsMargins(0, 0, 0, 0)
+        self.box_mob = QFrame()
+        bm_layout = QVBoxLayout(self.box_mob)
+        bm_layout.setContentsMargins(8, 6, 8, 6)
         bm_layout.setSpacing(2)
         lbl_h_mob = QLabel("Mobile Number:")
-        lbl_h_mob.setStyleSheet("font-size: 10px; font-weight: 600; color: #64748B; border: none;")
+        lbl_h_mob.setStyleSheet("font-size: 10px; font-weight: 600; border: none;")
         self.lbl_info_mobile = QLabel("—")
-        self.lbl_info_mobile.setStyleSheet("font-size: 11px; font-weight: 700; color: #334155; border: none;")
+        self.lbl_info_mobile.setStyleSheet("font-size: 11.5px; font-weight: 700; border: none;")
         bm_layout.addWidget(lbl_h_mob)
         bm_layout.addWidget(self.lbl_info_mobile)
 
-        info_grid.addWidget(box_name, stretch=2)
-        info_grid.addWidget(box_id, stretch=1)
-        info_grid.addWidget(box_cnic, stretch=1)
-        info_grid.addWidget(box_mob, stretch=1)
+        info_grid.addWidget(self.box_name, 0, 0)
+        info_grid.addWidget(self.box_id, 0, 1)
+        info_grid.addWidget(self.box_cnic, 1, 0)
+        info_grid.addWidget(self.box_mob, 1, 1)
         info_vlayout.addLayout(info_grid)
+
+        self._apply_stat_box_styles()
 
         panel_layout.addWidget(info_card)
 
@@ -332,15 +301,10 @@ class LabourLedgerView(QWidget):
         btn_box.setContentsMargins(0, 4, 0, 0)
         btn_box.setSpacing(8)
 
-        self.btn_generate = QPushButton("📄 Generate & View Ledger Report (کھاتہ رپورٹ دیکھیں)")
+        self.btn_generate = QPushButton("Generate & View Ledger Report (کھاتہ رپورٹ دیکھیں)")
         self.btn_generate.setMinimumHeight(44)
         self.btn_generate.setCursor(Qt.PointingHandCursor)
-        self.btn_generate.setStyleSheet(
-            "QPushButton { background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #0284C7, stop:1 #0369A1); "
-            "color: #FFFFFF; font-weight: 800; font-size: 14px; border-radius: 8px; padding: 0 24px; border: none; } "
-            "QPushButton:hover { background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #0369A1, stop:1 #075985); } "
-            "QPushButton:pressed { background-color: #0c4a6e; }"
-        )
+        self.btn_generate.setProperty("class", "btn-primary")
         self.btn_generate.clicked.connect(self.open_ledger_report_window)
         btn_box.addWidget(self.btn_generate)
 
@@ -348,25 +312,17 @@ class LabourLedgerView(QWidget):
         shortcuts_row = QHBoxLayout()
         shortcuts_row.setSpacing(12)
 
-        self.btn_amdan_akrajat = QPushButton("💰 New Amdan / Akrajat Entry")
+        self.btn_amdan_akrajat = QPushButton("New Amdan / Akrajat Entry")
         self.btn_amdan_akrajat.setMinimumHeight(38)
         self.btn_amdan_akrajat.setCursor(Qt.PointingHandCursor)
-        self.btn_amdan_akrajat.setStyleSheet(
-            "QPushButton { background-color: #FFFFFF; color: #0284C7; font-weight: 700; font-size: 12px; "
-            "border: 1px solid #BAE6FD; border-radius: 8px; padding: 0 16px; } "
-            "QPushButton:hover { background-color: #F0F9FF; border-color: #0284C7; }"
-        )
+        self.btn_amdan_akrajat.setProperty("class", "btn-secondary")
         self.btn_amdan_akrajat.clicked.connect(self._on_open_amdan_akrajat)
         shortcuts_row.addWidget(self.btn_amdan_akrajat, stretch=1)
 
-        self.btn_payment = QPushButton("💸 Record Quick Payment / Advance")
+        self.btn_payment = QPushButton("Record Quick Payment / Advance")
         self.btn_payment.setMinimumHeight(38)
         self.btn_payment.setCursor(Qt.PointingHandCursor)
-        self.btn_payment.setStyleSheet(
-            "QPushButton { background-color: #FFFFFF; color: #16A34A; font-weight: 700; font-size: 12px; "
-            "border: 1px solid #BBF7D0; border-radius: 8px; padding: 0 16px; } "
-            "QPushButton:hover { background-color: #F0FDF4; border-color: #16A34A; }"
-        )
+        self.btn_payment.setProperty("class", "btn-success")
         self.btn_payment.clicked.connect(self._on_record_payment)
         shortcuts_row.addWidget(self.btn_payment, stretch=1)
 
@@ -453,29 +409,42 @@ class LabourLedgerView(QWidget):
                 if ledger_data:
                     status = ledger_data.get("statement_status", "BALANCED")
                     closing = ledger_data.get("closing_balance", 0.0)
+                    is_dark = theme_mgr.is_dark_mode()
                     if status == "RECEIVABLE":
-                        self.lbl_info_balance.setText(f"🔴 Receivable (باقی): Rs. {abs(closing):,.2f}")
+                        self.lbl_info_balance.setText(f"Receivable (باقی): Rs. {abs(closing):,.2f}")
+                        bg = "rgba(220, 38, 38, 0.18)" if is_dark else "#FEF2F2"
+                        fg = "#F87171" if is_dark else "#DC2626"
+                        bdr = "rgba(239, 68, 68, 0.4)" if is_dark else "#FECACA"
                         self.lbl_info_balance.setStyleSheet(
-                            "font-size: 13px; font-weight: 800; color: #DC2626; background-color: #FEF2F2; "
-                            "border: 1px solid #FECACA; border-radius: 6px; padding: 4px 12px;"
+                            f"font-size: 13px; font-weight: 800; color: {fg}; background-color: {bg}; "
+                            f"border: 1px solid {bdr}; border-radius: 6px; padding: 4px 12px;"
                         )
                     elif status == "ADVANCE":
-                        self.lbl_info_balance.setText(f"🟢 Advance (پیشگی): Rs. {abs(closing):,.2f}")
+                        self.lbl_info_balance.setText(f"Advance (پیشگی): Rs. {abs(closing):,.2f}")
+                        bg = "rgba(16, 185, 129, 0.18)" if is_dark else "#F0FDF4"
+                        fg = "#34D399" if is_dark else "#16A34A"
+                        bdr = "rgba(16, 185, 129, 0.4)" if is_dark else "#BBF7D0"
                         self.lbl_info_balance.setStyleSheet(
-                            "font-size: 13px; font-weight: 800; color: #16A34A; background-color: #F0FDF4; "
-                            "border: 1px solid #BBF7D0; border-radius: 6px; padding: 4px 12px;"
+                            f"font-size: 13px; font-weight: 800; color: {fg}; background-color: {bg}; "
+                            f"border: 1px solid {bdr}; border-radius: 6px; padding: 4px 12px;"
                         )
                     elif status == "PAYABLE":
-                        self.lbl_info_balance.setText(f"🟠 Payable (واجب الادا): Rs. {abs(closing):,.2f}")
+                        self.lbl_info_balance.setText(f"Payable (واجب الادا): Rs. {abs(closing):,.2f}")
+                        bg = "rgba(245, 158, 11, 0.18)" if is_dark else "#FFFBEB"
+                        fg = "#FBBF24" if is_dark else "#D97706"
+                        bdr = "rgba(245, 158, 11, 0.4)" if is_dark else "#FDE68A"
                         self.lbl_info_balance.setStyleSheet(
-                            "font-size: 13px; font-weight: 800; color: #D97706; background-color: #FFFBEB; "
-                            "border: 1px solid #FDE68A; border-radius: 6px; padding: 4px 12px;"
+                            f"font-size: 13px; font-weight: 800; color: {fg}; background-color: {bg}; "
+                            f"border: 1px solid {bdr}; border-radius: 6px; padding: 4px 12px;"
                         )
                     else:
-                        self.lbl_info_balance.setText("⚪ Zero Balance (0.00)")
+                        self.lbl_info_balance.setText("Zero Balance (0.00)")
+                        bg = "#1E293B" if is_dark else "#F1F5F9"
+                        fg = "#94A3B8" if is_dark else "#475569"
+                        bdr = "#334155" if is_dark else "#CBD5E1"
                         self.lbl_info_balance.setStyleSheet(
-                            "font-size: 13px; font-weight: 800; color: #475569; background-color: #F1F5F9; "
-                            "border: 1px solid #CBD5E1; border-radius: 6px; padding: 4px 12px;"
+                            f"font-size: 13px; font-weight: 800; color: {fg}; background-color: {bg}; "
+                            f"border: 1px solid {bdr}; border-radius: 6px; padding: 4px 12px;"
                         )
                 else:
                     self.lbl_info_balance.setText("Balance: —")
@@ -548,3 +517,16 @@ class LabourLedgerView(QWidget):
         main_win = self.window()
         if hasattr(main_win, "open_money_transactions_tab"):
             main_win.open_money_transactions_tab()
+
+    def _apply_stat_box_styles(self):
+        is_dark = theme_mgr.is_dark_mode()
+        stat_bg = "#0F172A" if is_dark else "#F8FAFC"
+        stat_border = "#334155" if is_dark else "#E2E8F0"
+        box_style = f"QFrame {{ background-color: {stat_bg}; border: 1px solid {stat_border}; border-radius: 6px; padding: 8px 10px; }}"
+        for box in (getattr(self, "box_name", None), getattr(self, "box_id", None), getattr(self, "box_cnic", None), getattr(self, "box_mob", None)):
+            if box:
+                box.setStyleSheet(box_style)
+
+    def _on_theme_changed(self, _theme: str):
+        self._apply_stat_box_styles()
+

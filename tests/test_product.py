@@ -11,6 +11,8 @@ def setup_db_and_auth():
     engine = get_engine()
     Base.metadata.drop_all(bind=engine)
     init_db()
+    from tests.conftest import seed_test_auth
+    seed_test_auth()
     # Authenticate as admin by default
     AuthService.authenticate("admin", "Admin@123")
     yield

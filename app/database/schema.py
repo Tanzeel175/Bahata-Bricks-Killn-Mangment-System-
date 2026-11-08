@@ -1,4 +1,9 @@
-from datetime import datetime
+from datetime import datetime, timezone
+
+
+def _utcnow():
+    """Timezone-aware UTC timestamp (replaces deprecated datetime.utcnow)."""
+    return datetime.now(timezone.utc)
 from sqlalchemy import (
     Column, Integer, String, Boolean, DateTime, Date, Float, ForeignKey, Text
 )
@@ -34,7 +39,7 @@ class User(Base):
     FailedAttempts = Column(Integer, default=0, nullable=False)
     MustChangePassword = Column(Boolean, default=False, nullable=False)
     CreatedBy = Column(String(50), nullable=True)
-    CreatedDate = Column(DateTime, default=datetime.utcnow, nullable=False)
+    CreatedDate = Column(DateTime, default=_utcnow, nullable=False)
     LastLogin = Column(DateTime, nullable=True)
 
     role = relationship("Role", back_populates="users")
@@ -81,9 +86,9 @@ class LabourAccount(Base):
 
     # Audit tracking
     CreatedBy = Column(String(50), nullable=True)
-    CreatedDate = Column(DateTime, default=datetime.utcnow, nullable=False)
+    CreatedDate = Column(DateTime, default=_utcnow, nullable=False)
     ModifiedBy = Column(String(50), nullable=True)
-    ModifiedDate = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    ModifiedDate = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
 
     account_type = relationship("AccountType", back_populates="labour_accounts")
 
@@ -99,7 +104,7 @@ class AuditLog(Base):
     Username = Column(String(50), nullable=True)
     Action = Column(String(100), nullable=False)
     Details = Column(Text, nullable=True)
-    Timestamp = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    Timestamp = Column(DateTime, default=_utcnow, nullable=False, index=True)
     IPAddress = Column(String(50), nullable=True)
 
     def __repr__(self):
@@ -134,9 +139,9 @@ class Product(Base):
 
     # Audit tracking
     CreatedBy = Column(String(50), nullable=True)
-    CreatedDate = Column(DateTime, default=datetime.utcnow, nullable=False)
+    CreatedDate = Column(DateTime, default=_utcnow, nullable=False)
     ModifiedBy = Column(String(50), nullable=True)
-    ModifiedDate = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    ModifiedDate = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
 
     category_mappings = relationship("ProductCategoryMapping", back_populates="product", cascade="all, delete-orphan")
 
@@ -167,9 +172,9 @@ class ProductionHeader(Base):
     Remarks = Column(String(255), nullable=True)
 
     CreatedBy = Column(String(50), nullable=True)
-    CreatedDate = Column(DateTime, default=datetime.utcnow, nullable=False)
+    CreatedDate = Column(DateTime, default=_utcnow, nullable=False)
     ModifiedBy = Column(String(50), nullable=True)
-    ModifiedDate = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    ModifiedDate = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
 
     account_type = relationship("AccountType")
     details = relationship("ProductionDetail", back_populates="header", cascade="all, delete-orphan")
@@ -202,12 +207,12 @@ class LabourRate(Base):
     WorkerID = Column(String(50), ForeignKey("LabourAccounts.WorkerID", ondelete="CASCADE"), nullable=False, index=True)
     ProductID = Column(Integer, ForeignKey("Products.ProductID", ondelete="CASCADE"), nullable=False, index=True)
     RatePer1000 = Column(Float, default=0.0, nullable=False)
-    EffectiveDate = Column(DateTime, default=datetime.utcnow, nullable=False)
+    EffectiveDate = Column(DateTime, default=_utcnow, nullable=False)
 
     CreatedBy = Column(String(50), nullable=True)
-    CreatedDate = Column(DateTime, default=datetime.utcnow, nullable=False)
+    CreatedDate = Column(DateTime, default=_utcnow, nullable=False)
     ModifiedBy = Column(String(50), nullable=True)
-    ModifiedDate = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    ModifiedDate = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
 
     worker = relationship("LabourAccount")
     product = relationship("Product")
@@ -221,7 +226,7 @@ class LabourLedger(Base):
 
     LedgerID = Column(Integer, primary_key=True, autoincrement=True)
     WorkerID = Column(String(50), ForeignKey("LabourAccounts.WorkerID", ondelete="CASCADE"), nullable=False, index=True)
-    TransactionDate = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    TransactionDate = Column(DateTime, default=_utcnow, nullable=False, index=True)
     ReferenceType = Column(String(50), nullable=False)
     ReferenceID = Column(Integer, nullable=True)
     Description = Column(String(255), nullable=False)
@@ -253,9 +258,9 @@ class SalesHeader(Base):
     TotalAmount = Column(Float, default=0.0, nullable=False)
 
     CreatedBy = Column(String(50), nullable=True)
-    CreatedDate = Column(DateTime, default=datetime.utcnow, nullable=False)
+    CreatedDate = Column(DateTime, default=_utcnow, nullable=False)
     ModifiedBy = Column(String(50), nullable=True)
-    ModifiedDate = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    ModifiedDate = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
 
     customer = relationship("LabourAccount")
     details = relationship("SalesDetail", back_populates="header", cascade="all, delete-orphan")
@@ -291,7 +296,7 @@ class ProductInventory(Base):
     DamagedQuantity = Column(Float, default=0.0, nullable=False)
     CurrentStock = Column(Float, default=0.0, nullable=False)
     MinStockThreshold = Column(Float, default=5000.0, nullable=False)
-    LastUpdated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    LastUpdated = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
 
     product = relationship("Product")
 
@@ -304,7 +309,7 @@ class CustomerLedger(Base):
 
     LedgerID = Column(Integer, primary_key=True, autoincrement=True)
     CustomerID = Column(String(50), ForeignKey("LabourAccounts.WorkerID", ondelete="CASCADE"), nullable=False, index=True)
-    TransactionDate = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    TransactionDate = Column(DateTime, default=_utcnow, nullable=False, index=True)
     ReferenceType = Column(String(50), nullable=False)
     ReferenceID = Column(Integer, nullable=True)
     Description = Column(String(255), nullable=False)
@@ -333,9 +338,9 @@ class LabourPayment(Base):
     Remarks = Column(String(255), nullable=True)
 
     CreatedBy = Column(String(50), nullable=True)
-    CreatedDate = Column(DateTime, default=datetime.utcnow, nullable=False)
+    CreatedDate = Column(DateTime, default=_utcnow, nullable=False)
     ModifiedBy = Column(String(50), nullable=True)
-    ModifiedDate = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    ModifiedDate = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
 
     worker = relationship("LabourAccount")
 
@@ -355,15 +360,15 @@ class MoneyTransaction(Base):
     BankAccount = Column(String(100), nullable=True)
     ChequeNumber = Column(String(100), nullable=True)
     Amount = Column(Float, default=0.0, nullable=False)
-    Description = Column(String(255), nullable=False)
+    Description = Column(String(255), default="", nullable=True)
     ReferenceType = Column(String(50), nullable=True)
     ReferenceID = Column(String(50), nullable=True)
     IsDeleted = Column(Boolean, default=False, nullable=False, index=True)
 
     CreatedBy = Column(String(50), nullable=True)
-    CreatedDate = Column(DateTime, default=datetime.utcnow, nullable=False)
+    CreatedDate = Column(DateTime, default=_utcnow, nullable=False)
     ModifiedBy = Column(String(50), nullable=True)
-    ModifiedDate = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    ModifiedDate = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
 
     account = relationship("LabourAccount")
 

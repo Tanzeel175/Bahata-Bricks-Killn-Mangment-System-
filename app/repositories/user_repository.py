@@ -11,10 +11,12 @@ class UserRepository(BaseRepository[User]):
         super().__init__(session, User)
 
     def get_by_username(self, username: str) -> Optional[User]:
+        from sqlalchemy import func
+        clean = (username or "").strip().lower()
         return (
             self.session.query(User)
             .options(joinedload(User.role))
-            .filter(User.Username == username)
+            .filter(func.lower(User.Username) == clean)
             .first()
         )
 

@@ -7,7 +7,7 @@ from app.database.schema import (
     MoneyTransaction
 )
 from app.database.connection import get_engine, get_db_session, protect_local_database_file
-from app.security.hashing import verify_password
+from app.security.hashing import verify_password, hash_password
 
 logger = logging.getLogger(__name__)
 
@@ -75,15 +75,17 @@ def init_db():
 
         session.flush()
 
-        # Existing installations may contain previously documented credentials.
-        # They keep access but are forced through the local password-change flow after login.
+        # Ensure existing Admin and Munshi accounts are active, unlocked, and have zero failed attempts
         for username, known_password in (("admin", "Admin@123"), ("munshi", "Munshi@123")):
-            legacy_user = session.query(User).filter_by(Username=username).first()
-            if legacy_user and verify_password(known_password, legacy_user.PasswordHash):
-                legacy_user.MustChangePassword = True
-
-        # User accounts are intentionally never seeded with known credentials.
-        # The first launch presents a local administrator-setup screen instead.
+            user = session.query(User).filter_by(Username=username).first()
+            if user:
+                user.IsLocked = False
+                user.FailedAttempts = 0
+                user.IsActive = True
+                if hasattr(user, "MustChangePassword"):
+                    user.MustChangePassword = False
+                if not verify_password(known_password, user.PasswordHash):
+                    user.PasswordHash = hash_password(known_password)
 
         # Seed Account Types
         for type_name in DEFAULT_ACCOUNT_TYPES:

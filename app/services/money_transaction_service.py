@@ -1,3 +1,4 @@
+import logging
 from datetime import date, datetime
 from typing import List, Tuple, Dict, Any, Optional
 from app.database.connection import get_db_session
@@ -8,6 +9,8 @@ from app.repositories.audit_repository import AuditRepository
 from app.validators.transaction_validator import TransactionValidator
 from app.security.rbac import can_delete_records, require_authenticated
 from app.security.session import current_session
+
+logger = logging.getLogger(__name__)
 
 
 class MoneyTransactionService:
@@ -100,7 +103,7 @@ class MoneyTransactionService:
         txn_date: date,
         account_id: str,
         amount: float,
-        description: str,
+        description: Optional[str] = "",
         payment_method: str = "Cash",
         bank_account: Optional[str] = None,
         cheque_number: Optional[str] = None,
@@ -119,7 +122,7 @@ class MoneyTransactionService:
             "AccountID": account_id,
             "TransactionDate": txn_date,
             "Amount": amount,
-            "Description": description,
+            "Description": (description or "").strip(),
             "PaymentMethod": payment_method
         }
         is_valid, err = TransactionValidator.validate(val_data)
@@ -189,7 +192,7 @@ class MoneyTransactionService:
                     )
                 )
 
-                session.commit()
+                session.flush()
 
                 res_dict = {
                     "TransactionID": txn.TransactionID,
@@ -207,6 +210,7 @@ class MoneyTransactionService:
                 return True, msg, res_dict
 
         except Exception as e:
+            logger.exception("Failed to record money transaction")
             return False, f"Failed to record money transaction: {e}", None
 
     @staticmethod
@@ -216,7 +220,7 @@ class MoneyTransactionService:
         txn_date: date,
         account_id: str,
         amount: float,
-        description: str,
+        description: Optional[str] = "",
         payment_method: str = "Cash",
         bank_account: Optional[str] = None,
         cheque_number: Optional[str] = None,
@@ -228,11 +232,11 @@ class MoneyTransactionService:
             return False, "Access Denied: Only Administrator has permission to edit financial transactions."
 
         val_data = {
-            "TransactionType": "RECEIPT",  # validated type is not changing
+            "TransactionType": "RECEIPT",  # type is preserved on update; validation just needs a valid value
             "AccountID": account_id,
             "TransactionDate": txn_date,
             "Amount": amount,
-            "Description": description,
+            "Description": (description or "").strip(),
             "PaymentMethod": payment_method
         }
         is_valid, err = TransactionValidator.validate(val_data)
@@ -274,9 +278,10 @@ class MoneyTransactionService:
                     details=f"TRANSACTION_UPDATE: No={txn.TransactionNo}, OldAmount=Rs. {old_amt:,.2f}, NewAmount=Rs. {amount:,.2f}"
                 )
 
-                session.commit()
+                session.flush()
                 return True, f"Transaction '{txn.TransactionNo}' successfully updated."
         except Exception as e:
+            logger.exception("Failed to update transaction")
             return False, f"Failed to update transaction: {e}"
 
     @staticmethod
@@ -310,9 +315,10 @@ class MoneyTransactionService:
                     details=f"TRANSACTION_DELETE: Reversed No={txn_no}, Type={t_type}, Amount=Rs. {amt:,.2f}. Reason: {reason}"
                 )
 
-                session.commit()
+                session.flush()
                 return True, f"Transaction '{txn_no}' has been safely deleted and its ledger effect reversed."
         except Exception as e:
+            logger.exception("Failed to delete transaction")
             return False, f"Failed to delete transaction: {e}"
 
     @staticmethod
@@ -323,7 +329,8 @@ class MoneyTransactionService:
         category_id: Optional[int] = None,
         account_id: Optional[str] = None,
         payment_method: Optional[str] = None,
-        search_query: Optional[str] = None
+        search_query: Optional[str] = None,
+        limit: Optional[int] = None
     ) -> List[Dict[str, Any]]:
         """Query register of transactions formatted for UI view."""
         with get_db_session() as session:
@@ -336,7 +343,8 @@ class MoneyTransactionService:
                 account_id=account_id,
                 payment_method=payment_method,
                 search_query=search_query,
-                include_deleted=False
+                include_deleted=False,
+                limit=limit
             )
 
             results = []
@@ -392,6 +400,7 @@ class MoneyTransactionService:
                 "Mobile": account.Mobile if account else "",
                 "Address": account.Address if account else "",
                 "CategoryName": cat_name,
+                "AccountTypeID": account.AccountTypeID if account else None,
                 "Amount": txn.Amount,
                 "PaymentMethod": txn.PaymentMethod,
                 "BankAccount": txn.BankAccount or "",
@@ -402,3 +411,52 @@ class MoneyTransactionService:
                 "CreatedBy": txn.CreatedBy or "",
                 "CreatedDate": txn.CreatedDate.strftime("%d-%b-%Y %H:%M") if txn.CreatedDate else ""
             }
+
+    @staticmethod
+    def get_transaction_by_id_or_no(identifier: str, preferred_type: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """Fetch single transaction details by ID or TransactionNo (e.g. 'RCT-000001' or '5')."""
+        with get_db_session() as session:
+            repo = TransactionRepository(session)
+            txn = repo.get_by_id_or_no(identifier, preferred_type=preferred_type)
+            if not txn or txn.IsDeleted:
+                return None
+
+            account = txn.account
+            acc_name = account.EnglishName if account else txn.AccountID
+            urdu_name = account.UrduName if account else ""
+            cat_name = account.account_type.AccountTypeName if account and account.account_type else "General"
+
+            return {
+                "TransactionID": txn.TransactionID,
+                "TransactionNo": txn.TransactionNo,
+                "TransactionType": txn.TransactionType,
+                "TransactionDate": txn.TransactionDate,
+                "DateStr": txn.TransactionDate.strftime("%d-%b-%Y") if txn.TransactionDate else "",
+                "AccountID": txn.AccountID,
+                "AccountName": acc_name,
+                "UrduName": urdu_name,
+                "CNIC": account.CNIC if account else "",
+                "Mobile": account.Mobile if account else "",
+                "Address": account.Address if account else "",
+                "CategoryName": cat_name,
+                "AccountTypeID": account.AccountTypeID if account else None,
+                "Amount": txn.Amount,
+                "PaymentMethod": txn.PaymentMethod,
+                "BankAccount": txn.BankAccount or "",
+                "ChequeNumber": txn.ChequeNumber or "",
+                "Description": txn.Description,
+                "ReferenceType": txn.ReferenceType or "",
+                "ReferenceID": txn.ReferenceID or "",
+                "CreatedBy": txn.CreatedBy or "",
+                "CreatedDate": txn.CreatedDate.strftime("%d-%b-%Y %H:%M") if txn.CreatedDate else ""
+            }
+
+    @staticmethod
+    def get_adjacent_transaction(current_id: Optional[int], direction: str = "prev") -> Optional[Dict[str, Any]]:
+        """Fetch details of adjacent transaction (previous or next)."""
+        with get_db_session() as session:
+            repo = TransactionRepository(session)
+            adj_id = repo.get_adjacent_transaction_id(current_id, direction)
+            if not adj_id:
+                return None
+        return MoneyTransactionService.get_transaction_by_id(adj_id)

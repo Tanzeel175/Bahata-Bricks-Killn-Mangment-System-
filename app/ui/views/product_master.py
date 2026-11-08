@@ -37,9 +37,9 @@ class ProductMasterView(QWidget):
         header_box = QHBoxLayout()
         title_box = QVBoxLayout()
         t = QLabel("Dynamic Product Master Management")
-        t.setStyleSheet("font-size: 20px; font-weight: 800; color: #0F172A;")
+        t.setProperty("role", "heading-1")
         sub = QLabel("Central product repository for Purchase, Sales, Production/Molding, and Inventory modules")
-        sub.setStyleSheet("font-size: 12px; color: #64748B;")
+        sub.setProperty("role", "subtext")
         title_box.addWidget(t)
         title_box.addWidget(sub)
         header_box.addLayout(title_box)
@@ -61,9 +61,7 @@ class ProductMasterView(QWidget):
 
         # 2. UPPER DATA ENTRY FORM CARD (3 COMPACT COLUMNS)
         form_card = QFrame()
-        form_card.setStyleSheet(
-            "QFrame { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px; }"
-        )
+        form_card.setProperty("class", "card-panel")
         form_hbox = QHBoxLayout(form_card)
         form_hbox.setContentsMargins(10, 10, 10, 10)
         form_hbox.setSpacing(18)
@@ -72,7 +70,6 @@ class ProductMasterView(QWidget):
             lbl = QLabel(text)
             lbl.setStyleSheet(
                 f"font-weight: {'700' if required else '600'}; "
-                f"color: {'#0F172A' if required else '#475569'}; "
                 "font-size: 11px; border: none; background: transparent; margin: 0px; padding: 0px;"
             )
             return lbl
@@ -116,7 +113,7 @@ class ProductMasterView(QWidget):
         col2_layout.addWidget(make_field_heading("Product Category* (Multi-Select)", required=True))
 
         cat_box = QFrame()
-        cat_box.setStyleSheet("QFrame { background-color: #F8FAFC; border: 1px solid #CBD5E1; border-radius: 6px; padding: 6px; }")
+        cat_box.setProperty("class", "card-panel")
         cat_box_layout = QVBoxLayout(cat_box)
         cat_box_layout.setSpacing(4)
         cat_box_layout.setContentsMargins(6, 6, 6, 6)
@@ -130,7 +127,6 @@ class ProductMasterView(QWidget):
         self.txt_stock_quantity.setMinimumHeight(28)
         self.txt_stock_quantity.setPlaceholderText("0.00")
         self.txt_stock_quantity.setReadOnly(True)
-        self.txt_stock_quantity.setStyleSheet("background-color: #EFF6FF; color: #1E40AF; font-weight: 800;")
         self.txt_stock_quantity.textChanged.connect(self._recalculate_stock_value)
 
         col2_layout.addWidget(make_field_heading("Available Stock (Linked Live)"))
@@ -143,10 +139,11 @@ class ProductMasterView(QWidget):
         col3_layout.setSpacing(4)
 
         self.txt_total_stock_value = QLineEdit()
+        self.txt_total_stock_value.setObjectName("totalStockValue")
         self.txt_total_stock_value.setPlaceholderText("0.00")
         self.txt_total_stock_value.setReadOnly(True)
         self.txt_total_stock_value.setMinimumHeight(28)
-        self.txt_total_stock_value.setStyleSheet("background-color: #EFF6FF; color: #1E40AF; font-weight: 800;")
+        self.txt_total_stock_value.setStyleSheet("font-weight: 800;")
 
         self.txt_description = QLineEdit()
         self.txt_description.setPlaceholderText("Optional notes or specification about product...")
@@ -181,26 +178,26 @@ class ProductMasterView(QWidget):
         self.btn_new.setShortcut("Ctrl+N")
         self.btn_new.clicked.connect(self._on_new_clicked)
 
-        self.btn_save = make_pill("💾 Save", "#0284C7", "#0369A1")
+        self.btn_save = make_pill("Save", "#0284C7", "#0369A1")
         self.btn_save.setShortcut("Ctrl+S")
         self.btn_save.clicked.connect(self._on_save_clicked)
 
-        self.btn_update = make_pill("🔄 Update", "#0284C7", "#0369A1")
+        self.btn_update = make_pill("Update", "#0284C7", "#0369A1")
         self.btn_update.clicked.connect(self._on_save_clicked)
 
-        self.btn_delete = make_pill("❌ Delete", "#E11D48", "#BE123C")
+        self.btn_delete = make_pill("Delete", "#E11D48", "#BE123C")
         self.btn_delete.clicked.connect(self._on_delete_clicked)
 
-        self.btn_clear = make_pill("🧹 Clear", "#64748B", "#475569")
+        self.btn_clear = make_pill("Clear", "#64748B", "#475569")
         self.btn_clear.clicked.connect(self._clear_form)
 
-        self.btn_print = make_pill("🖨️ Print", "#334155", "#1E293B")
+        self.btn_print = make_pill("Print", "#334155", "#1E293B")
         self.btn_print.clicked.connect(self._on_print_clicked)
 
-        self.btn_export = make_pill("📊 Export Excel", "#059669", "#047857")
+        self.btn_export = make_pill("Export Excel", "#059669", "#047857")
         self.btn_export.clicked.connect(self._on_export_excel_clicked)
 
-        self.btn_close = make_pill("❌ Close", "#94A3B8", "#64748B")
+        self.btn_close = make_pill("Close", "#94A3B8", "#64748B")
         self.btn_close.clicked.connect(self._on_close_clicked)
 
         btn_bar.addWidget(self.btn_new)
@@ -216,9 +213,7 @@ class ProductMasterView(QWidget):
 
         # 4. LOWER SEARCH FILTERS & DATA GRID TABLE CARD
         grid_card = QFrame()
-        grid_card.setStyleSheet(
-            "QFrame { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px; }"
-        )
+        grid_card.setProperty("class", "card-panel")
         grid_card_layout = QVBoxLayout(grid_card)
         grid_card_layout.setSpacing(10)
 
@@ -314,7 +309,9 @@ class ProductMasterView(QWidget):
         # Update category checkboxes in form
         for cat in categories:
             chk = QCheckBox(cat["CategoryName"])
-            chk.setStyleSheet("font-weight: 600; color: #1E293B; font-size: 12px; border: none; background: transparent;")
+            f = chk.font()
+            f.setBold(True)
+            chk.setFont(f)
             self.cat_checkbox_container.addWidget(chk)
             self.category_checkboxes[cat["CategoryID"]] = chk
 

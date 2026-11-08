@@ -13,6 +13,8 @@ from app.services.labour_service import LabourService
 from app.ui.components.toast import ToastNotification
 from app.ui.views.sales_receipt_window import SalesReceiptWindow
 from app.security.session import current_session
+from app.ui.styles import configure_date_edit
+from app.ui.theme_manager import theme_mgr
 
 
 class SalesEntryView(QWidget):
@@ -45,10 +47,10 @@ class SalesEntryView(QWidget):
         # 1. TOP HEADER TITLE
         header_box = QHBoxLayout()
         title_box = QVBoxLayout()
-        t = QLabel("🧾 Sales Entry & Billing (سیلز رسید)")
-        t.setStyleSheet("font-size: 20px; font-weight: 800; color: #0F172A;")
+        t = QLabel("Sales Entry & Invoicing (سیلز رسید)")
+        t.setProperty("role", "heading-1")
         sub = QLabel("Record multi-product brick sales, assign transport/driver, and automatically update Customer Khata Ledger")
-        sub.setStyleSheet("font-size: 12px; color: #64748B;")
+        sub.setProperty("role", "subtext")
         title_box.addWidget(t)
         title_box.addWidget(sub)
         header_box.addLayout(title_box)
@@ -70,12 +72,11 @@ class SalesEntryView(QWidget):
         # 2. RECEIPT METADATA CARD
         meta_card = QFrame()
         meta_card.setObjectName("meta_card")
-        meta_card.setStyleSheet("#meta_card { background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 8px; }")
         meta_layout = QVBoxLayout(meta_card)
         meta_layout.setContentsMargins(12, 12, 12, 12)
         meta_layout.setSpacing(10)
 
-        lbl_meta_title = QLabel("📌 Receipt Information & Customer Details")
+        lbl_meta_title = QLabel("Receipt Information & Customer Details")
         lbl_meta_title.setStyleSheet("font-weight: 800; color: #0284C7; font-size: 13px; border: none; background: transparent;")
         meta_layout.addWidget(lbl_meta_title)
 
@@ -85,27 +86,24 @@ class SalesEntryView(QWidget):
 
         v1 = QVBoxLayout()
         l_inv = QLabel("Invoice / Receipt #:")
-        l_inv.setStyleSheet("font-weight: 600; font-size: 11px; color: #475569; border: none; background: transparent;")
+        l_inv.setProperty("class", "form-field-label")
         self.txt_invoice_no = QLineEdit("Auto-Generated")
         self.txt_invoice_no.setReadOnly(True)
         self.txt_invoice_no.setMinimumHeight(32)
-        self.txt_invoice_no.setStyleSheet("background-color: #F1F5F9; color: #0F172A; font-weight: bold;")
         v1.addWidget(l_inv)
         v1.addWidget(self.txt_invoice_no)
 
         v2 = QVBoxLayout()
         l_date = QLabel("Sale Date:")
-        l_date.setStyleSheet("font-weight: 600; font-size: 11px; color: #475569; border: none; background: transparent;")
+        l_date.setProperty("class", "form-field-label")
         self.dt_sale_date = QDateEdit(QDate.currentDate())
-        self.dt_sale_date.setCalendarPopup(True)
-        self.dt_sale_date.setDisplayFormat("yyyy-MM-dd")
-        self.dt_sale_date.setMinimumHeight(32)
+        configure_date_edit(self.dt_sale_date, min_width=125, min_height=32)
         v2.addWidget(l_date)
         v2.addWidget(self.dt_sale_date)
 
         v3 = QVBoxLayout()
         l_cust = QLabel("Customer (گاہک):")
-        l_cust.setStyleSheet("font-weight: 600; font-size: 11px; color: #475569; border: none; background: transparent;")
+        l_cust.setProperty("class", "form-field-label")
         self.cmb_customer = QComboBox()
         self.cmb_customer.setMinimumHeight(32)
         self.cmb_customer.currentIndexChanged.connect(self._on_customer_changed)
@@ -114,12 +112,9 @@ class SalesEntryView(QWidget):
 
         v4 = QVBoxLayout()
         l_bal = QLabel("Customer Khata Balance:")
-        l_bal.setStyleSheet("font-weight: 600; font-size: 11px; color: #475569; border: none; background: transparent;")
+        l_bal.setProperty("class", "form-field-label")
         self.lbl_customer_balance = QLabel("Balance: Rs. 0.00")
         self.lbl_customer_balance.setMinimumHeight(32)
-        self.lbl_customer_balance.setStyleSheet(
-            "QLabel { background-color: #F8FAFC; color: #0F172A; font-weight: bold; border: 1px solid #CBD5E1; border-radius: 4px; padding: 4px 8px; font-size: 12px; }"
-        )
         v4.addWidget(l_bal)
         v4.addWidget(self.lbl_customer_balance)
 
@@ -135,7 +130,7 @@ class SalesEntryView(QWidget):
 
         v_tmode = QVBoxLayout()
         l_tm = QLabel("Transport Source (ٹرانسپورٹ):")
-        l_tm.setStyleSheet("font-weight: 600; font-size: 11px; color: #475569; border: none; background: transparent;")
+        l_tm.setProperty("class", "form-field-label")
         self.cmb_transport_mode = QComboBox()
         self.cmb_transport_mode.setMinimumHeight(32)
         for tm in SalesService.get_transport_modes():
@@ -146,7 +141,7 @@ class SalesEntryView(QWidget):
 
         v_driver = QVBoxLayout()
         l_dr = QLabel("Delivery Person / Driver (ڈرائیور / ریڑھا والا):")
-        l_dr.setStyleSheet("font-weight: 600; font-size: 11px; color: #475569; border: none; background: transparent;")
+        l_dr.setProperty("class", "form-field-label")
         self.cmb_driver = QComboBox()
         self.cmb_driver.setEditable(True)
         self.cmb_driver.setMinimumHeight(32)
@@ -155,7 +150,7 @@ class SalesEntryView(QWidget):
 
         v_veh = QVBoxLayout()
         l_vh = QLabel("Vehicle / Cart #:")
-        l_vh.setStyleSheet("font-weight: 600; font-size: 11px; color: #475569; border: none; background: transparent;")
+        l_vh.setProperty("class", "form-field-label")
         self.txt_vehicle_no = QLineEdit()
         self.txt_vehicle_no.setPlaceholderText("e.g. LES-1234 or Rehra #3")
         self.txt_vehicle_no.setMinimumHeight(32)
@@ -164,7 +159,7 @@ class SalesEntryView(QWidget):
 
         v_rem = QVBoxLayout()
         l_rm = QLabel("Remarks / Delivery Site (ریمارکس):")
-        l_rm.setStyleSheet("font-weight: 600; font-size: 11px; color: #475569; border: none; background: transparent;")
+        l_rm.setProperty("class", "form-field-label")
         self.txt_remarks = QLineEdit()
         self.txt_remarks.setPlaceholderText("Site location or special notes")
         self.txt_remarks.setMinimumHeight(32)
@@ -182,12 +177,11 @@ class SalesEntryView(QWidget):
         # 3. MULTI-PRODUCT LINE ITEM ENTRY CARD
         items_card = QFrame()
         items_card.setObjectName("items_card")
-        items_card.setStyleSheet("#items_card { background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 8px; }")
         items_layout = QVBoxLayout(items_card)
         items_layout.setContentsMargins(12, 12, 12, 12)
         items_layout.setSpacing(10)
 
-        lbl_items_title = QLabel("🧱 Multi-Product Line Items Entry (اینٹوں کا اندراج)")
+        lbl_items_title = QLabel("Multi-Product Line Items (اینٹوں کا اندراج)")
         lbl_items_title.setStyleSheet("font-weight: 800; color: #0284C7; font-size: 13px; border: none; background: transparent;")
         items_layout.addWidget(lbl_items_title)
 
@@ -197,7 +191,7 @@ class SalesEntryView(QWidget):
 
         v_p = QVBoxLayout()
         lp = QLabel("Select Product:")
-        lp.setStyleSheet("font-weight: 600; font-size: 11px; color: #475569; border: none; background: transparent;")
+        lp.setProperty("class", "form-field-label")
         self.cmb_product = QComboBox()
         self.cmb_product.setMinimumHeight(32)
         self.cmb_product.currentIndexChanged.connect(self._on_product_selection_changed)
@@ -206,7 +200,7 @@ class SalesEntryView(QWidget):
 
         v_q = QVBoxLayout()
         lq = QLabel("Quantity (Pcs):")
-        lq.setStyleSheet("font-weight: 600; font-size: 11px; color: #475569; border: none; background: transparent;")
+        lq.setProperty("class", "form-field-label")
         self.txt_quantity = QLineEdit()
         self.txt_quantity.setPlaceholderText("e.g. 5000")
         self.txt_quantity.setMinimumHeight(32)
@@ -216,7 +210,7 @@ class SalesEntryView(QWidget):
 
         v_r = QVBoxLayout()
         lr = QLabel("Rate per 1,000 (PKR):")
-        lr.setStyleSheet("font-weight: 600; font-size: 11px; color: #475569; border: none; background: transparent;")
+        lr.setProperty("class", "form-field-label")
         self.txt_rate = QLineEdit()
         self.txt_rate.setPlaceholderText("e.g. 14000")
         self.txt_rate.setMinimumHeight(32)
@@ -226,19 +220,16 @@ class SalesEntryView(QWidget):
 
         v_tot = QVBoxLayout()
         lt = QLabel("Line Total (PKR):")
-        lt.setStyleSheet("font-weight: 600; font-size: 11px; color: #475569; border: none; background: transparent;")
+        lt.setProperty("class", "form-field-label")
         self.lbl_line_total = QLabel("Rs. 0.00")
         self.lbl_line_total.setMinimumHeight(32)
-        self.lbl_line_total.setStyleSheet(
-            "QLabel { background-color: #F0FDF4; color: #16A34A; font-weight: bold; border: 1px solid #BBF7D0; border-radius: 4px; padding: 4px 8px; font-size: 13px; }"
-        )
         v_tot.addWidget(lt)
         v_tot.addWidget(self.lbl_line_total)
 
         v_act = QVBoxLayout()
         v_act.addSpacing(18)
         btn_box = QHBoxLayout()
-        self.btn_add_item = QPushButton("➕ Add to Receipt")
+        self.btn_add_item = QPushButton("+ Add to Receipt")
         self.btn_add_item.setMinimumHeight(32)
         self.btn_add_item.setStyleSheet(
             "QPushButton { background-color: #0284C7; color: #FFFFFF; font-weight: 700; font-size: 12px; border-radius: 4px; padding: 4px 14px; border: none; } "
@@ -246,7 +237,7 @@ class SalesEntryView(QWidget):
         )
         self.btn_add_item.clicked.connect(self._on_add_or_update_item_clicked)
 
-        self.btn_cancel_edit_item = QPushButton("❌ Cancel")
+        self.btn_cancel_edit_item = QPushButton("Cancel")
         self.btn_cancel_edit_item.setMinimumHeight(32)
         self.btn_cancel_edit_item.setStyleSheet(
             "QPushButton { background-color: #94A3B8; color: #FFFFFF; font-weight: 700; font-size: 12px; border-radius: 4px; padding: 4px 10px; border: none; } "
@@ -289,11 +280,6 @@ class SalesEntryView(QWidget):
         self.items_table.setColumnWidth(3, 140)
         self.items_table.setColumnWidth(4, 160)
         self.items_table.setColumnWidth(5, 140)
-        self.items_table.setStyleSheet(
-            "QTableWidget { background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 6px; gridline-color: #F1F5F9; font-size: 13px; }"
-            "QHeaderView::section { background-color: #F1F5F9; color: #1E293B; font-weight: 700; font-size: 12px; padding: 6px 10px; border: none; border-bottom: 2px solid #CBD5E1; border-right: 1px solid #E2E8F0; min-height: 40px; height: 40px; max-height: 40px; }"
-            "QTableWidget::item { padding-top: 10px; padding-bottom: 10px; padding-left: 10px; padding-right: 10px; border-bottom: 1px solid #E2E8F0; }"
-        )
         items_layout.addWidget(self.items_table)
 
         # Grand Total Summary Banner
@@ -322,20 +308,20 @@ class SalesEntryView(QWidget):
             )
             return btn
 
-        self.btn_save = make_pill("💾 Save & Post to Ledger", "#0284C7", "#0369A1")
+        self.btn_save = make_pill("Save & Post to Ledger", "#0284C7", "#0369A1")
         self.btn_save.clicked.connect(self._on_save_clicked)
 
-        self.btn_print = make_pill("🖨️ Print Receipt", "#10B981", "#059669")
+        self.btn_print = make_pill("Print Receipt", "#10B981", "#059669")
         self.btn_print.clicked.connect(self._on_print_clicked)
 
-        self.btn_new = make_pill("🔄 New Sale", "#64748B", "#475569")
+        self.btn_new = make_pill("+ New Sale", "#64748B", "#475569")
         self.btn_new.clicked.connect(self._on_new_clicked)
 
-        self.btn_delete = make_pill("🗑️ Delete Sale", "#EF4444", "#DC2626")
+        self.btn_delete = make_pill("Delete Sale", "#EF4444", "#DC2626")
         self.btn_delete.setVisible(current_session.is_admin)
         self.btn_delete.clicked.connect(self._on_delete_clicked)
 
-        self.btn_close = make_pill("❌ Close", "#94A3B8", "#64748B")
+        self.btn_close = make_pill("Close", "#94A3B8", "#64748B")
         self.btn_close.clicked.connect(self._on_close_clicked)
 
         btn_bar.addWidget(self.btn_save)
@@ -350,13 +336,12 @@ class SalesEntryView(QWidget):
         # 5. SALES HISTORY & SEARCH CARD
         hist_card = QFrame()
         hist_card.setObjectName("hist_card")
-        hist_card.setStyleSheet("#hist_card { background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 8px; }")
         hist_layout = QVBoxLayout(hist_card)
         hist_layout.setContentsMargins(12, 12, 12, 12)
         hist_layout.setSpacing(8)
 
-        lbl_hist_title = QLabel("📜 Recent Sales Receipts & History")
-        lbl_hist_title.setStyleSheet("font-weight: 800; color: #0F172A; font-size: 13px; border: none; background: transparent;")
+        lbl_hist_title = QLabel("Recent Sales Receipts & History")
+        lbl_hist_title.setProperty("class", "heading-secondary")
         hist_layout.addWidget(lbl_hist_title)
 
         # History Filters
@@ -364,26 +349,26 @@ class SalesEntryView(QWidget):
         h_filter_bar.setSpacing(8)
 
         self.dt_hist_from = QDateEdit(QDate.currentDate().addDays(-30))
-        self.dt_hist_from.setCalendarPopup(True)
-        self.dt_hist_from.setDisplayFormat("yyyy-MM-dd")
-        self.dt_hist_from.setMinimumHeight(30)
+        configure_date_edit(self.dt_hist_from, min_width=125, min_height=30)
 
         self.dt_hist_to = QDateEdit(QDate.currentDate())
-        self.dt_hist_to.setCalendarPopup(True)
-        self.dt_hist_to.setDisplayFormat("yyyy-MM-dd")
-        self.dt_hist_to.setMinimumHeight(30)
+        configure_date_edit(self.dt_hist_to, min_width=125, min_height=30)
 
         self.txt_hist_search = QLineEdit()
         self.txt_hist_search.setPlaceholderText("Search by invoice #, customer, driver...")
         self.txt_hist_search.setMinimumHeight(30)
         self.txt_hist_search.textChanged.connect(self._load_sales_history)
 
-        btn_search_refresh = make_pill("🔍 Search / Refresh", "#0284C7", "#0369A1")
+        btn_search_refresh = make_pill("Search / Refresh", "#0284C7", "#0369A1")
         btn_search_refresh.clicked.connect(self._load_sales_history)
 
-        h_filter_bar.addWidget(QLabel("From:"))
+        lbl_h_from = QLabel("From:")
+        lbl_h_from.setProperty("class", "form-field-label")
+        h_filter_bar.addWidget(lbl_h_from)
         h_filter_bar.addWidget(self.dt_hist_from)
-        h_filter_bar.addWidget(QLabel("To:"))
+        lbl_h_to = QLabel("To:")
+        lbl_h_to.setProperty("class", "form-field-label")
+        h_filter_bar.addWidget(lbl_h_to)
         h_filter_bar.addWidget(self.dt_hist_to)
         h_filter_bar.addWidget(self.txt_hist_search, stretch=1)
         h_filter_bar.addWidget(btn_search_refresh)
@@ -413,11 +398,6 @@ class SalesEntryView(QWidget):
         self.history_table.setColumnWidth(4, 120)
         self.history_table.setColumnWidth(5, 130)
         self.history_table.setColumnWidth(6, 130)
-        self.history_table.setStyleSheet(
-            "QTableWidget { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 4px; gridline-color: #F1F5F9; font-size: 13px; }"
-            "QHeaderView::section { background-color: #F1F5F9; color: #1E293B; font-weight: 700; font-size: 12px; padding: 6px 10px; border: none; border-bottom: 2px solid #CBD5E1; border-right: 1px solid #E2E8F0; min-height: 40px; height: 40px; max-height: 40px; }"
-            "QTableWidget::item { padding: 6px 10px; border-bottom: 1px solid #F1F5F9; }"
-        )
         self.history_table.itemDoubleClicked.connect(self._on_history_row_double_clicked)
         hist_layout.addWidget(self.history_table)
 
@@ -425,6 +405,47 @@ class SalesEntryView(QWidget):
 
         scroll.setWidget(container)
         main_layout.addWidget(scroll)
+
+        self._apply_theme()
+        theme_mgr.theme_changed.connect(lambda _: self._apply_theme())
+
+    def _apply_theme(self):
+        is_dark = theme_mgr.is_dark_mode()
+        lbl_col = "#FFFFFF" if is_dark else "#334155"
+
+        for lbl in self.findChildren(QLabel):
+            if lbl.property("class") == "form-field-label":
+                lbl.setStyleSheet(f"font-weight: 700; font-size: 11px; color: {lbl_col}; border: none; background: transparent;")
+
+        if hasattr(self, "txt_invoice_no") and self.txt_invoice_no:
+            inv_bg = "#0F172A" if is_dark else "#F1F5F9"
+            inv_fg = "#FFFFFF" if is_dark else "#0F172A"
+            inv_border = "#334155" if is_dark else "#CBD5E1"
+            self.txt_invoice_no.setStyleSheet(f"background-color: {inv_bg}; color: {inv_fg}; font-weight: bold; border: 1px solid {inv_border}; border-radius: 4px; padding: 2px 8px;")
+
+        if hasattr(self, "lbl_customer_balance") and self.lbl_customer_balance:
+            bal_bg = "#1E293B" if is_dark else "#F8FAFC"
+            bal_fg = "#FFFFFF" if is_dark else "#0F172A"
+            bal_border = "#334155" if is_dark else "#CBD5E1"
+            self.lbl_customer_balance.setStyleSheet(
+                f"QLabel {{ background-color: {bal_bg}; color: {bal_fg}; font-weight: bold; border: 1px solid {bal_border}; border-radius: 4px; padding: 4px 8px; font-size: 12px; }}"
+            )
+
+        if hasattr(self, "lbl_line_total") and self.lbl_line_total:
+            lt_bg = "rgba(22, 163, 74, 0.2)" if is_dark else "#F0FDF4"
+            lt_fg = "#4ADE80" if is_dark else "#16A34A"
+            lt_border = "#16A34A" if is_dark else "#BBF7D0"
+            self.lbl_line_total.setStyleSheet(
+                f"QLabel {{ background-color: {lt_bg}; color: {lt_fg}; font-weight: bold; border: 1px solid {lt_border}; border-radius: 4px; padding: 4px 8px; font-size: 13px; }}"
+            )
+
+        if hasattr(self, "lbl_grand_summary") and self.lbl_grand_summary:
+            gs_bg = "rgba(22, 163, 74, 0.2)" if is_dark else "#F0FDF4"
+            gs_fg = "#4ADE80" if is_dark else "#166534"
+            gs_border = "#22C55E" if is_dark else "#22C55E"
+            self.lbl_grand_summary.setStyleSheet(
+                f"QLabel {{ background-color: {gs_bg}; color: {gs_fg}; font-weight: 800; font-size: 14px; border: 2px solid {gs_border}; border-radius: 6px; padding: 8px 18px; }}"
+            )
 
     # --- DATA LOADING & COMBO UPDATES ---
     def refresh_data(self):
@@ -485,15 +506,25 @@ class SalesEntryView(QWidget):
         if ledger:
             bal = ledger.get("closing_balance", 0.0)
             status = ledger.get("statement_status", "BALANCED")
+            is_dark = theme_mgr.is_dark_mode()
             if status == "RECEIVABLE":
                 self.lbl_customer_balance.setText(f"Khata Balance: -Rs. {abs(bal):,.2f} (Receivable / Baqi)")
-                self.lbl_customer_balance.setStyleSheet("QLabel { background-color: #FEF2F2; color: #DC2626; font-weight: bold; border: 1px solid #FECACA; border-radius: 4px; padding: 4px 8px; font-size: 12px; }")
+                rec_bg = "rgba(220, 38, 38, 0.18)" if is_dark else "#FEF2F2"
+                rec_fg = "#F87171" if is_dark else "#DC2626"
+                rec_bdr = "rgba(239, 68, 68, 0.4)" if is_dark else "#FECACA"
+                self.lbl_customer_balance.setStyleSheet(f"QLabel {{ background-color: {rec_bg}; color: {rec_fg}; font-weight: bold; border: 1px solid {rec_bdr}; border-radius: 4px; padding: 4px 8px; font-size: 12px; }}")
             elif status == "ADVANCE":
                 self.lbl_customer_balance.setText(f"Khata Balance: +Rs. {bal:,.2f} (Advance / Jama)")
-                self.lbl_customer_balance.setStyleSheet("QLabel { background-color: #F0FDF4; color: #16A34A; font-weight: bold; border: 1px solid #BBF7D0; border-radius: 4px; padding: 4px 8px; font-size: 12px; }")
+                adv_bg = "rgba(16, 185, 129, 0.18)" if is_dark else "#F0FDF4"
+                adv_fg = "#34D399" if is_dark else "#16A34A"
+                adv_bdr = "rgba(16, 185, 129, 0.4)" if is_dark else "#BBF7D0"
+                self.lbl_customer_balance.setStyleSheet(f"QLabel {{ background-color: {adv_bg}; color: {adv_fg}; font-weight: bold; border: 1px solid {adv_bdr}; border-radius: 4px; padding: 4px 8px; font-size: 12px; }}")
             else:
                 self.lbl_customer_balance.setText("Khata Balance: Rs. 0.00 (Cleared)")
-                self.lbl_customer_balance.setStyleSheet("QLabel { background-color: #F8FAFC; color: #334155; font-weight: bold; border: 1px solid #CBD5E1; border-radius: 4px; padding: 4px 8px; font-size: 12px; }")
+                clr_bg = "#1E293B" if is_dark else "#F8FAFC"
+                clr_fg = "#94A3B8" if is_dark else "#334155"
+                clr_bdr = "#334155" if is_dark else "#CBD5E1"
+                self.lbl_customer_balance.setStyleSheet(f"QLabel {{ background-color: {clr_bg}; color: {clr_fg}; font-weight: bold; border: 1px solid {clr_bdr}; border-radius: 4px; padding: 4px 8px; font-size: 12px; }}")
         else:
             self.lbl_customer_balance.setText("Khata Balance: Rs. 0.00")
 
@@ -549,7 +580,7 @@ class SalesEntryView(QWidget):
         if self.editing_item_index is not None and 0 <= self.editing_item_index < len(self.receipt_items):
             self.receipt_items[self.editing_item_index] = item_data
             self.editing_item_index = None
-            self.btn_add_item.setText("➕ Add to Receipt")
+            self.btn_add_item.setText("+ Add to Receipt")
             self.btn_cancel_edit_item.setVisible(False)
         else:
             self.receipt_items.append(item_data)
@@ -561,7 +592,7 @@ class SalesEntryView(QWidget):
 
     def _cancel_item_edit(self):
         self.editing_item_index = None
-        self.btn_add_item.setText("➕ Add to Receipt")
+        self.btn_add_item.setText("+ Add to Receipt")
         self.btn_cancel_edit_item.setVisible(False)
         self.txt_quantity.clear()
         self._calculate_line_total()
@@ -599,18 +630,18 @@ class SalesEntryView(QWidget):
             b_layout.setSpacing(4)
             b_layout.setAlignment(Qt.AlignCenter)
 
-            btn_edit = QPushButton("✏️")
+            btn_edit = QPushButton("Edit")
             btn_edit.setToolTip("Edit item")
             btn_edit.setFocusPolicy(Qt.NoFocus)
             btn_edit.setFixedHeight(28)
-            btn_edit.setStyleSheet("QPushButton { background-color: #0284C7; color: white; border-radius: 4px; font-size: 12px; padding: 2px 8px; }")
+            btn_edit.setStyleSheet("QPushButton { background-color: #0284C7; color: white; border-radius: 4px; font-size: 11px; padding: 2px 8px; }")
             btn_edit.clicked.connect(lambda _, r=row: self._edit_item_row(r))
 
-            btn_del = QPushButton("🗑️")
+            btn_del = QPushButton("Delete")
             btn_del.setToolTip("Remove item")
             btn_del.setFocusPolicy(Qt.NoFocus)
             btn_del.setFixedHeight(28)
-            btn_del.setStyleSheet("QPushButton { background-color: #EF4444; color: white; border-radius: 4px; font-size: 12px; padding: 2px 8px; }")
+            btn_del.setStyleSheet("QPushButton { background-color: #EF4444; color: white; border-radius: 4px; font-size: 11px; padding: 2px 8px; }")
             btn_del.clicked.connect(lambda _, r=row: self._remove_item_row(r))
 
             b_layout.addWidget(btn_edit)
@@ -657,7 +688,7 @@ class SalesEntryView(QWidget):
 
             self.txt_quantity.setText(f"{item['Quantity']:g}")
             self.txt_rate.setText(f"{item['RatePer1000']:g}")
-            self.btn_add_item.setText("✏️ Update Line Item")
+            self.btn_add_item.setText("Update Line Item")
             self.btn_cancel_edit_item.setVisible(True)
             self._calculate_line_total()
 
@@ -731,7 +762,7 @@ class SalesEntryView(QWidget):
         self.txt_vehicle_no.clear()
         self.txt_remarks.clear()
         self.txt_quantity.clear()
-        self.btn_add_item.setText("➕ Add to Receipt")
+        self.btn_add_item.setText("+ Add to Receipt")
         self.btn_cancel_edit_item.setVisible(False)
 
         self._render_items_table()

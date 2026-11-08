@@ -1,5 +1,5 @@
-from datetime import date
-from typing import Dict, Any
+from datetime import date, datetime
+from typing import Dict, Any, List, Optional, Tuple
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
     QFrame, QTextBrowser, QFileDialog
@@ -28,7 +28,7 @@ class LedgerReportWindow(QDialog):
         w_name = worker.get("english_name", "Labourer")
         w_id = worker.get("worker_id", "")
 
-        self.setWindowTitle(f"📄 Labour Ledger Report — {w_name} ({w_id})")
+        self.setWindowTitle(f"Labour Ledger Report — {w_name} ({w_id})")
         self.resize(1040, 850)
         self.setMinimumSize(880, 600)
         self.setStyleSheet("QDialog { background-color: #F8FAFC; }")
@@ -44,23 +44,23 @@ class LedgerReportWindow(QDialog):
 
         # 1. Top Action Toolbar
         toolbar_frame = QFrame()
-        toolbar_frame.setStyleSheet(
-            "QFrame { background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 8px; padding: 6px; }"
-        )
+        toolbar_frame.setObjectName("toolbar_frame")
+        toolbar_frame.setProperty("class", "card-panel")
         tb_layout = QHBoxLayout(toolbar_frame)
-        tb_layout.setContentsMargins(8, 4, 8, 4)
+        tb_layout.setContentsMargins(8, 6, 8, 6)
         tb_layout.setSpacing(10)
 
-        lbl_doc = QLabel("📋 Printable A4 Document Preview")
-        lbl_doc.setStyleSheet("font-size: 14px; font-weight: 800; color: #1E293B;")
+        lbl_doc = QLabel("Printable A4 Document Preview")
+        lbl_doc.setProperty("class", "heading-secondary")
+        lbl_doc.setStyleSheet("font-size: 14px; font-weight: 800;")
         tb_layout.addWidget(lbl_doc)
         tb_layout.addStretch()
 
         # Zoom Controls
-        self.btn_zoom_out = QPushButton("🔍 -")
+        self.btn_zoom_out = QPushButton("Zoom -")
         self.btn_zoom_out.setToolTip("Zoom Out")
         self.btn_zoom_out.setStyleSheet(
-            "QPushButton { background-color: #F1F5F9; color: #334155; font-weight: 700; font-size: 13px; border-radius: 6px; padding: 6px 12px; border: 1px solid #CBD5E1; } "
+            "QPushButton { background-color: #F1F5F9; color: #334155; font-weight: 700; font-size: 12px; border-radius: 6px; padding: 6px 12px; border: 1px solid #CBD5E1; } "
             "QPushButton:hover { background-color: #E2E8F0; }"
         )
         self.btn_zoom_out.clicked.connect(self._zoom_out)
@@ -71,17 +71,17 @@ class LedgerReportWindow(QDialog):
         self.lbl_zoom.setAlignment(Qt.AlignCenter)
         tb_layout.addWidget(self.lbl_zoom)
 
-        self.btn_zoom_in = QPushButton("🔍 +")
+        self.btn_zoom_in = QPushButton("Zoom +")
         self.btn_zoom_in.setToolTip("Zoom In")
         self.btn_zoom_in.setStyleSheet(
-            "QPushButton { background-color: #F1F5F9; color: #334155; font-weight: 700; font-size: 13px; border-radius: 6px; padding: 6px 12px; border: 1px solid #CBD5E1; } "
+            "QPushButton { background-color: #F1F5F9; color: #334155; font-weight: 700; font-size: 12px; border-radius: 6px; padding: 6px 12px; border: 1px solid #CBD5E1; } "
             "QPushButton:hover { background-color: #E2E8F0; }"
         )
         self.btn_zoom_in.clicked.connect(self._zoom_in)
         tb_layout.addWidget(self.btn_zoom_in)
 
         # Refresh Data Button
-        self.btn_refresh = QPushButton("🔄 Refresh")
+        self.btn_refresh = QPushButton("Refresh")
         self.btn_refresh.setToolTip("Reload latest data from database")
         self.btn_refresh.setStyleSheet(
             "QPushButton { background-color: #F1F5F9; color: #0284C7; font-weight: 700; font-size: 12px; border-radius: 6px; padding: 6px 14px; border: 1px solid #BAE6FD; } "
@@ -91,7 +91,7 @@ class LedgerReportWindow(QDialog):
         tb_layout.addWidget(self.btn_refresh)
 
         # Print Button
-        self.btn_print = QPushButton("🖨️ Print Report")
+        self.btn_print = QPushButton("Print Report")
         self.btn_print.setStyleSheet(
             "QPushButton { background-color: #2563EB; color: #FFFFFF; font-weight: 700; font-size: 12px; border-radius: 6px; padding: 6px 16px; border: none; } "
             "QPushButton:hover { background-color: #1D4ED8; }"
@@ -100,7 +100,7 @@ class LedgerReportWindow(QDialog):
         tb_layout.addWidget(self.btn_print)
 
         # PDF Export Button
-        self.btn_pdf = QPushButton("📄 Save as PDF")
+        self.btn_pdf = QPushButton("Save as PDF")
         self.btn_pdf.setStyleSheet(
             "QPushButton { background-color: #D97706; color: #FFFFFF; font-weight: 700; font-size: 12px; border-radius: 6px; padding: 6px 16px; border: none; } "
             "QPushButton:hover { background-color: #B45309; }"
@@ -109,7 +109,7 @@ class LedgerReportWindow(QDialog):
         tb_layout.addWidget(self.btn_pdf)
 
         # Close Button
-        self.btn_close = QPushButton("✖ Close")
+        self.btn_close = QPushButton("Close")
         self.btn_close.setStyleSheet(
             "QPushButton { background-color: #E2E8F0; color: #334155; font-weight: 700; font-size: 12px; border-radius: 6px; padding: 6px 14px; border: 1px solid #CBD5E1; } "
             "QPushButton:hover { background-color: #CBD5E1; }"
@@ -122,7 +122,7 @@ class LedgerReportWindow(QDialog):
         # 2. Report Document Viewer (QTextBrowser)
         self.browser = QTextBrowser()
         self.browser.setStyleSheet(
-            "QTextBrowser { background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 8px; padding: 6px 10px; }"
+            "QTextBrowser { background-color: #FFFFFF; color: #0F172A; border: 1px solid #CBD5E1; border-radius: 8px; padding: 6px 10px; }"
         )
         self.browser.setOpenExternalLinks(False)
         main_layout.addWidget(self.browser)
@@ -383,7 +383,7 @@ class LedgerReportWindow(QDialog):
         printer.setPageMargins(QMarginsF(8, 8, 8, 8), QPageLayout.Unit.Millimeter)
 
         dlg = QPrintDialog(printer, self)
-        dlg.setWindowTitle("🖨️ Print A4 Labour Ledger Statement")
+        dlg.setWindowTitle("Print A4 Labour Ledger Statement")
         if dlg.exec() == QPrintDialog.Accepted:
             self._print_to_printer(printer)
 
@@ -411,3 +411,312 @@ class LedgerReportWindow(QDialog):
             self.ledger_data = new_data
             self._render_report()
             ToastNotification.show_success(self, "Report Refreshed", "Latest transactions loaded from database.")
+
+
+class TabularSummaryReportWindow(QDialog):
+    """
+    Dedicated High-Resolution A4 Popup Report Window for Group & Tabular Summaries:
+    - All Customers Summary Report (Date to Date)
+    - Labour Category / All Labour Summary Report
+    - Sales Register Report
+    - Daily Work & Production Register
+    - Amdan & Akrajat Cashbook Register
+    Supports Zooming, Full A4 Printing, and PDF Export.
+    """
+
+    def __init__(
+        self,
+        title: str,
+        subtitle: str,
+        columns: List[Dict[str, Any]],
+        rows: List[Dict[str, Any]],
+        kpi_items: List[Tuple[str, str, str]],  # (Label, Value, Color)
+        from_date: Optional[date] = None,
+        to_date: Optional[date] = None,
+        parent=None
+    ):
+        super().__init__(parent)
+        self.report_title = title
+        self.report_subtitle = subtitle
+        self.columns = columns
+        self.rows = rows
+        self.kpi_items = kpi_items
+        self.from_date = from_date
+        self.to_date = to_date
+
+        self.setWindowTitle(f"{title} — Printable A4 Report")
+        self.resize(1100, 850)
+        self.setMinimumSize(900, 600)
+        self.setStyleSheet("QDialog { background-color: #F8FAFC; }")
+
+        self.zoom_level = 100
+        self._init_ui()
+        self._render_report()
+
+    def _init_ui(self):
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(16, 16, 16, 16)
+        main_layout.setSpacing(12)
+
+        # 1. Top Action Toolbar
+        toolbar_frame = QFrame()
+        toolbar_frame.setObjectName("toolbar_frame")
+        toolbar_frame.setProperty("class", "card-panel")
+        tb_layout = QHBoxLayout(toolbar_frame)
+        tb_layout.setContentsMargins(8, 6, 8, 6)
+        tb_layout.setSpacing(10)
+
+        lbl_doc = QLabel("Printable A4 Document Preview")
+        lbl_doc.setProperty("class", "heading-secondary")
+        lbl_doc.setStyleSheet("font-size: 14px; font-weight: 800;")
+        tb_layout.addWidget(lbl_doc)
+        tb_layout.addStretch()
+
+        # Zoom Controls
+        self.btn_zoom_out = QPushButton("Zoom -")
+        self.btn_zoom_out.setToolTip("Zoom Out")
+        self.btn_zoom_out.setStyleSheet(
+            "QPushButton { background-color: #F1F5F9; color: #334155; font-weight: 700; font-size: 12px; border-radius: 6px; padding: 6px 12px; border: 1px solid #CBD5E1; } "
+            "QPushButton:hover { background-color: #E2E8F0; }"
+        )
+        self.btn_zoom_out.clicked.connect(self._zoom_out)
+        tb_layout.addWidget(self.btn_zoom_out)
+
+        self.lbl_zoom = QLabel("100%")
+        self.lbl_zoom.setStyleSheet("font-weight: 700; color: #64748B; min-width: 45px;")
+        self.lbl_zoom.setAlignment(Qt.AlignCenter)
+        tb_layout.addWidget(self.lbl_zoom)
+
+        self.btn_zoom_in = QPushButton("Zoom +")
+        self.btn_zoom_in.setToolTip("Zoom In")
+        self.btn_zoom_in.setStyleSheet(
+            "QPushButton { background-color: #F1F5F9; color: #334155; font-weight: 700; font-size: 12px; border-radius: 6px; padding: 6px 12px; border: 1px solid #CBD5E1; } "
+            "QPushButton:hover { background-color: #E2E8F0; }"
+        )
+        self.btn_zoom_in.clicked.connect(self._zoom_in)
+        tb_layout.addWidget(self.btn_zoom_in)
+
+        # Print Button
+        self.btn_print = QPushButton("Print Report")
+        self.btn_print.setStyleSheet(
+            "QPushButton { background-color: #2563EB; color: #FFFFFF; font-weight: 700; font-size: 12px; border-radius: 6px; padding: 6px 16px; border: none; } "
+            "QPushButton:hover { background-color: #1D4ED8; }"
+        )
+        self.btn_print.clicked.connect(self._on_print)
+        tb_layout.addWidget(self.btn_print)
+
+        # Export PDF Button
+        self.btn_pdf = QPushButton("Export PDF")
+        self.btn_pdf.setStyleSheet(
+            "QPushButton { background-color: #059669; color: #FFFFFF; font-weight: 700; font-size: 12px; border-radius: 6px; padding: 6px 16px; border: none; } "
+            "QPushButton:hover { background-color: #047857; }"
+        )
+        self.btn_pdf.clicked.connect(self._on_export_pdf)
+        tb_layout.addWidget(self.btn_pdf)
+
+        main_layout.addWidget(toolbar_frame)
+
+        # 2. Document Browser Viewer
+        self.browser = QTextBrowser()
+        self.browser.setStyleSheet(
+            "QTextBrowser { background-color: #FFFFFF; color: #0F172A; border: 1px solid #CBD5E1; border-radius: 8px; padding: 6px 10px; }"
+        )
+        self.browser.setOpenExternalLinks(False)
+        main_layout.addWidget(self.browser)
+
+    def _generate_html(self) -> str:
+        from app.config import COMPANY_NAME, APP_SUBTITLE
+
+        # Period string
+        p_str = "All Time"
+        if self.from_date and self.to_date:
+            p_str = f"{self.from_date.strftime('%d-%b-%Y')} to {self.to_date.strftime('%d-%b-%Y')}"
+
+        # Generate Table Header
+        th_html = ""
+        for col in self.columns:
+            w = col.get("width", "auto")
+            align = col.get("align", "left")
+            th_html += f'<th width="{w}" style="padding: 5px 6px; font-size: 8pt; font-weight: bold; text-align: {align}; border: 1px solid #CBD5E1; background-color: #F1F5F9; color: #0F172A;">{col["header"]}</th>'
+
+        # Generate Table Rows
+        rows_html = ""
+        for r_idx, row in enumerate(self.rows):
+            bg = "#FFFFFF" if r_idx % 2 == 0 else "#F8FAFC"
+            tr_html = f'<tr style="background-color: {bg};">'
+            for col in self.columns:
+                key = col["key"]
+                val = row.get(key, "")
+                align = col.get("align", "left")
+                is_curr = col.get("is_currency", False)
+                color = col.get("color", "#0F172A")
+
+                # Custom color overrides for status/numbers
+                if is_curr and isinstance(val, (int, float)):
+                    if val < 0:
+                        val_str = f"-Rs. {abs(val):,.2f}"
+                        val_color = "#DC2626"
+                    elif val > 0:
+                        val_str = f"Rs. {val:,.2f}"
+                        val_color = color if color != "#0F172A" else "#15803D"
+                    else:
+                        val_str = "0.00"
+                        val_color = "#64748B"
+                elif isinstance(val, (int, float)):
+                    val_str = f"{val:,.0f}" if isinstance(val, int) or val.is_integer() else f"{val:,.2f}"
+                    val_color = color
+                else:
+                    val_str = str(val) if val is not None else ""
+                    val_color = color
+
+                if key == "Status":
+                    if val in ("RECEIVABLE", "PAYABLE"):
+                        val_str = f'<span style="color: #DC2626; font-weight: bold;">{val}</span>'
+                    elif val in ("ADVANCE", "CREDIT"):
+                        val_str = f'<span style="color: #15803D; font-weight: bold;">{val}</span>'
+                    else:
+                        val_str = f'<span style="color: #64748B;">{val}</span>'
+
+                tr_html += f'<td style="padding: 4px 6px; font-size: 8pt; text-align: {align}; border: 1px solid #CBD5E1; color: {val_color};">{val_str}</td>'
+            tr_html += "</tr>"
+            rows_html += tr_html
+
+        if not self.rows:
+            rows_html = f'<tr><td colspan="{len(self.columns)}" style="padding: 16px; text-align: center; color: #64748B; font-style: italic;">No records found for the selected date range and filter criteria.</td></tr>'
+
+        # Generate KPI Summary Cards HTML
+        kpis_html = ""
+        if self.kpi_items:
+            cards = ""
+            for lbl, val, clr in self.kpi_items:
+                cards += f"""
+                <td style="padding: 6px 12px; background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 4px; text-align: center;">
+                    <div style="font-size: 7.5pt; font-weight: 700; color: #64748B; text-transform: uppercase;">{lbl}</div>
+                    <div style="font-size: 11pt; font-weight: 800; color: {clr}; margin-top: 2px;">{val}</div>
+                </td>
+                """
+            kpis_html = f'<table width="100%" style="margin-bottom: 10px; border-spacing: 6px 0;"><tr>{cards}</tr></table>'
+
+        html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <style>
+                @page {{
+                    size: A4 landscape;
+                    margin: 6mm;
+                }}
+                body {{
+                    font-family: 'Segoe UI', Arial, sans-serif;
+                    margin: 0;
+                    padding: 0;
+                    color: #0F172A;
+                    background-color: #FFFFFF;
+                }}
+                table {{
+                    width: 100%;
+                    border-collapse: collapse;
+                }}
+                tr {{
+                    page-break-inside: avoid;
+                }}
+                .header-banner {{
+                    background-color: #1E3A8A;
+                    color: #FFFFFF;
+                    padding: 10px 14px;
+                    border-radius: 6px;
+                    margin-bottom: 8px;
+                    text-align: center;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="header-banner">
+                <div style="font-size: 16pt; font-weight: 900; letter-spacing: 0.5px;">{COMPANY_NAME}</div>
+                <div style="font-size: 10pt; color: #93C5FD; font-weight: 600; margin-top: 2px;">{APP_SUBTITLE}</div>
+                <div style="font-size: 12pt; font-weight: 800; color: #FDE047; margin-top: 4px;">{self.report_title}</div>
+                <div style="font-size: 8.5pt; color: #E2E8F0; margin-top: 2px;">{self.report_subtitle}  •  Period: {p_str}  •  Printed: {datetime.now().strftime('%d-%b-%Y %H:%M')}</div>
+            </div>
+
+            {kpis_html}
+
+            <table width="100%" style="width: 100%; border-collapse: collapse; margin-bottom: 12px;">
+                <thead>
+                    <tr>
+                        {th_html}
+                    </tr>
+                </thead>
+                <tbody>
+                    {rows_html}
+                </tbody>
+            </table>
+
+            <table width="100%" style="margin-top: 24px; page-break-inside: avoid;">
+                <tr>
+                    <td width="33%" style="text-align: center;">
+                        <div style="border-top: 1px dashed #94A3B8; width: 80%; margin: 0 auto; padding-top: 4px; font-size: 8pt; font-weight: 700; color: #64748B;">Prepared by (Munshi)</div>
+                    </td>
+                    <td width="34%" style="text-align: center;">
+                        <div style="border-top: 1px dashed #94A3B8; width: 80%; margin: 0 auto; padding-top: 4px; font-size: 8pt; font-weight: 700; color: #64748B;">Verified by (Accountant)</div>
+                    </td>
+                    <td width="33%" style="text-align: center;">
+                        <div style="border-top: 1px dashed #94A3B8; width: 80%; margin: 0 auto; padding-top: 4px; font-size: 8pt; font-weight: 700; color: #64748B;">Approved by (Owner / Haji Sahib)</div>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+        return html
+
+    def _render_report(self):
+        self.browser.setHtml(self._generate_html())
+
+    def _zoom_in(self):
+        if self.zoom_level < 160:
+            self.zoom_level += 15
+            self.browser.zoomIn(1)
+            self.lbl_zoom.setText(f"{self.zoom_level}%")
+
+    def _zoom_out(self):
+        if self.zoom_level > 60:
+            self.zoom_level -= 15
+            self.browser.zoomOut(1)
+            self.lbl_zoom.setText(f"{self.zoom_level}%")
+
+    def _print_to_printer(self, printer: QPrinter):
+        doc = QTextDocument()
+        doc.setDocumentMargin(0)
+        page_size_pts = printer.pageLayout().paintRect(QPageLayout.Unit.Point).size()
+        doc.setPageSize(QSizeF(page_size_pts.width(), page_size_pts.height()))
+        doc.setHtml(self._generate_html())
+        doc.print_(printer)
+
+    def _on_print(self):
+        printer = QPrinter(QPrinter.PrinterResolution)
+        printer.setPageOrientation(QPageLayout.Orientation.Landscape)
+        printer.setPageSize(QPageSize(QPageSize.PageSizeId.A4))
+        printer.setPageMargins(QMarginsF(6, 6, 6, 6), QPageLayout.Unit.Millimeter)
+
+        dlg = QPrintDialog(printer, self)
+        dlg.setWindowTitle(f"Print {self.report_title}")
+        if dlg.exec() == QPrintDialog.Accepted:
+            self._print_to_printer(printer)
+
+    def _on_export_pdf(self):
+        safe_title = "".join(c for c in self.report_title if c.isalnum() or c in (" ", "_", "-")).strip().replace(" ", "_")
+        default_file = f"{safe_title}_{date.today().strftime('%Y%m%d')}.pdf"
+
+        file_path, _ = QFileDialog.getSaveFileName(self, "Save Multi-Page A4 Landscape PDF", default_file, "PDF Files (*.pdf)")
+        if file_path:
+            printer = QPrinter(QPrinter.PrinterResolution)
+            printer.setOutputFormat(QPrinter.PdfFormat)
+            printer.setPageOrientation(QPageLayout.Orientation.Landscape)
+            printer.setPageSize(QPageSize(QPageSize.PageSizeId.A4))
+            printer.setPageMargins(QMarginsF(6, 6, 6, 6), QPageLayout.Unit.Millimeter)
+            printer.setOutputFileName(file_path)
+
+            self._print_to_printer(printer)
+            ToastNotification.show_success(self, "PDF Exported", f"A4 Landscape PDF saved successfully to:\n{file_path}")
+

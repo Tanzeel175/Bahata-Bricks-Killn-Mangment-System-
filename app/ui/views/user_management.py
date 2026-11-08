@@ -224,11 +224,12 @@ class UserManagementView(QWidget):
         # Header Title
         header_layout = QHBoxLayout()
         title = QLabel("User Account Management")
-        title.setProperty("class", "heading-primary")
-        title.setStyleSheet("font-size: 18px; font-weight: 700; color: #0F172A;")
+        title.setProperty("role", "heading-1")
+        title.setStyleSheet("font-size: 18px; font-weight: 700;")
 
         subtitle = QLabel("Manage system users, roles, password resets, and account locks")
-        subtitle.setStyleSheet("color: #64748B; font-size: 12px;")
+        subtitle.setProperty("role", "subtext")
+        subtitle.setStyleSheet("font-size: 12px;")
 
         head_v = QVBoxLayout()
         head_v.addWidget(title)
@@ -242,27 +243,27 @@ class UserManagementView(QWidget):
         toolbar = QHBoxLayout()
         toolbar.setSpacing(8)
 
-        self.btn_new = QPushButton("➕ Create User")
+        self.btn_new = QPushButton("+ Create User")
         self.btn_new.setProperty("class", "btn-primary")
         self.btn_new.clicked.connect(self._on_new_user)
 
-        self.btn_edit = QPushButton("✏️ Edit User")
+        self.btn_edit = QPushButton("Edit User")
         self.btn_edit.clicked.connect(self._on_edit_user)
 
-        self.btn_lock = QPushButton("🔒 Lock / Unlock")
+        self.btn_lock = QPushButton("Lock / Unlock")
         self.btn_lock.clicked.connect(self._on_toggle_lock)
 
-        self.btn_reset_pw = QPushButton("🔑 Reset Password")
+        self.btn_reset_pw = QPushButton("Reset Password")
         self.btn_reset_pw.clicked.connect(self._on_reset_password)
 
-        self.btn_history = QPushButton("📜 View Login History")
+        self.btn_history = QPushButton("View Login History")
         self.btn_history.clicked.connect(self._on_view_history)
 
-        self.btn_delete = QPushButton("🗑️ Delete User")
+        self.btn_delete = QPushButton("Delete User")
         self.btn_delete.setProperty("class", "btn-danger")
         self.btn_delete.clicked.connect(self._on_delete_user)
 
-        self.btn_refresh = QPushButton("🔄 Refresh")
+        self.btn_refresh = QPushButton("Refresh")
         self.btn_refresh.clicked.connect(self.load_users)
 
         toolbar.addWidget(self.btn_new)

@@ -43,8 +43,10 @@ def get_engine():
         if db_url.startswith("sqlite"):
             connect_args = {"check_same_thread": False, "timeout": 30}
             engine_kwargs["connect_args"] = connect_args
-            # Use NullPool for SQLite to prevent stale cached in-memory DBAPI connections
-            engine_kwargs["poolclass"] = NullPool
+            # High-performance connection pool for instant local database queries
+            engine_kwargs["pool_size"] = 5
+            engine_kwargs["max_overflow"] = 10
+            engine_kwargs["pool_timeout"] = 30
         else:
             engine_kwargs["pool_pre_ping"] = True
 
@@ -57,6 +59,8 @@ def get_engine():
                 cursor.execute("PRAGMA journal_mode=WAL")
                 cursor.execute("PRAGMA synchronous=NORMAL")
                 cursor.execute("PRAGMA busy_timeout=15000")
+                cursor.execute("PRAGMA cache_size=-64000")
+                cursor.execute("PRAGMA temp_store=MEMORY")
                 cursor.close()
 
     return _engine

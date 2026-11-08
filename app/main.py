@@ -32,83 +32,9 @@ def main():
     wheel_filter = GlobalFocusWheelEventFilter(app)
     app.installEventFilter(wheel_filter)
 
-    # Global Application Stylesheet — ensures table headers are tall without affecting QCalendarWidget popups
-    app.setStyleSheet("""
-        QTableWidget {
-            background-color: #FFFFFF;
-            border: 1px solid #CBD5E1;
-            border-radius: 4px;
-            padding: 0px;
-            margin: 0px;
-            gridline-color: #E2E8F0;
-            selection-background-color: #E0F2FE;
-            selection-color: #0F172A;
-            font-size: 13px;
-        }
-        QTableWidget::item {
-            padding: 8px 10px;
-            min-height: 36px;
-        }
-        QTableWidget QHeaderView {
-            background-color: #F8FAFC;
-            border: none;
-            border-bottom: 2px solid #CBD5E1;
-            padding: 0px;
-            margin: 0px;
-            min-height: 48px;
-            border-radius: 0px;
-        }
-        QTableWidget QHeaderView::section {
-            background-color: #F8FAFC;
-            color: #0F172A;
-            font-weight: 700;
-            font-size: 12px;
-            padding: 8px 10px;
-            border: none;
-            border-right: 1px solid #CBD5E1;
-            border-bottom: 2px solid #CBD5E1;
-            min-height: 48px;
-            border-radius: 0px;
-        }
-        QTableCornerButton::section {
-            background-color: #F8FAFC;
-            border: none;
-            border-bottom: 2px solid #CBD5E1;
-            border-right: 1px solid #CBD5E1;
-            border-radius: 0px;
-            padding: 0px;
-            margin: 0px;
-        }
-        QCalendarWidget QAbstractItemView {
-            background-color: #FFFFFF;
-            color: #1E293B;
-            selection-background-color: #0284C7;
-            selection-color: #FFFFFF;
-            font-size: 13px;
-            font-weight: 600;
-            padding: 2px;
-        }
-        QCalendarWidget QWidget {
-            color: #1E293B;
-            font-size: 13px;
-        }
-        QCalendarWidget QToolButton {
-            color: #1E293B;
-            background-color: #F8FAFC;
-            border-radius: 4px;
-            padding: 4px;
-            font-weight: bold;
-        }
-        QDateEdit {
-            background-color: #FFFFFF;
-            border: 1px solid #CBD5E1;
-            border-radius: 4px;
-            padding: 4px 8px;
-            font-size: 13px;
-            color: #1E293B;
-            min-height: 32px;
-        }
-    """)
+    # Initialize and apply application-wide theme (Dark / Light / System auto-detect)
+    from app.ui.theme_manager import theme_mgr
+    theme_mgr.apply_theme()
 
     logger.info("Initializing database and seeding default datasets...")
     try:
@@ -132,7 +58,8 @@ def main():
                 return
         logger.info("Authentication successful. Launching main workspace...")
         main_win = MainWindow()
-        main_win.showMaximized()
+        main_win.fit_screen_with_margins(5)
+        main_win.show()
         sys.exit(app.exec())
     else:
         logger.info("Application exited from login window.")

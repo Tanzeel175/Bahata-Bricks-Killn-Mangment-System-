@@ -11,6 +11,7 @@ from app.services.labour_service import LabourService
 from app.services.product_service import ProductService
 from app.security.session import current_session
 from app.ui.components.toast import ToastNotification
+from app.ui.styles import configure_date_edit
 
 
 class ProductionEntryView(QWidget):
@@ -41,10 +42,10 @@ class ProductionEntryView(QWidget):
         # 1. TOP HEADER TITLE
         header_box = QHBoxLayout()
         title_box = QVBoxLayout()
-        t = QLabel("🛠️ Daily Production Entry (Bricks & Tiles Yield)")
-        t.setStyleSheet("font-size: 20px; font-weight: 800; color: #0F172A;")
+        t = QLabel("Daily Production Entry (Bricks & Tiles Yield)")
+        t.setProperty("role", "heading-1")
         sub = QLabel("Record daily labour production completed by Pathera, Bahri Wala, and Nakkasi Wala workers")
-        sub.setStyleSheet("font-size: 12px; color: #64748B;")
+        sub.setProperty("role", "subtext")
         title_box.addWidget(t)
         title_box.addWidget(sub)
         header_box.addLayout(title_box)
@@ -66,9 +67,7 @@ class ProductionEntryView(QWidget):
 
         # 2. UPPER HEADER FORM CARD (4 HORIZONTAL COLUMNS: Date, Category, Entry ID, Remarks)
         header_card = QFrame()
-        header_card.setStyleSheet(
-            "QFrame { background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 8px; padding: 12px; }"
-        )
+        header_card.setProperty("class", "card-panel")
         h_grid = QGridLayout(header_card)
         h_grid.setContentsMargins(10, 10, 10, 10)
         h_grid.setHorizontalSpacing(16)
@@ -78,15 +77,13 @@ class ProductionEntryView(QWidget):
             lbl = QLabel(text)
             lbl.setStyleSheet(
                 f"font-weight: {'700' if required else '600'}; "
-                f"color: {'#0F172A' if required else '#475569'}; "
                 "font-size: 11px; border: none; background: transparent; margin: 0px; padding: 0px;"
             )
             return lbl
 
         self.dt_entry_date = QDateEdit()
         self.dt_entry_date.setDate(QDate.currentDate())
-        self.dt_entry_date.setCalendarPopup(True)
-        self.dt_entry_date.setMinimumHeight(32)
+        configure_date_edit(self.dt_entry_date, min_width=125, min_height=32)
         self.dt_entry_date.dateChanged.connect(self._on_date_or_category_changed)
 
         self.cmb_account_type = QComboBox()
@@ -97,7 +94,6 @@ class ProductionEntryView(QWidget):
         self.txt_production_id.setPlaceholderText("Auto-generated ID")
         self.txt_production_id.setReadOnly(True)
         self.txt_production_id.setMinimumHeight(32)
-        self.txt_production_id.setStyleSheet("background-color: #F1F5F9; color: #64748B; font-weight: 700;")
 
         self.txt_remarks = QLineEdit()
         self.txt_remarks.setPlaceholderText("Optional notes about weather, shift, or batch...")
@@ -124,14 +120,12 @@ class ProductionEntryView(QWidget):
 
         # 3. DYNAMIC PRODUCTION GRID CARD
         grid_card = QFrame()
-        grid_card.setStyleSheet(
-            "QFrame { background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 8px; padding: 12px; }"
-        )
+        grid_card.setProperty("class", "card-panel")
         grid_layout = QVBoxLayout(grid_card)
         grid_layout.setSpacing(8)
 
-        self.lbl_grid_title = QLabel("📋 Active Labourers & Production Quantities")
-        self.lbl_grid_title.setStyleSheet("font-weight: 700; color: #1E293B; font-size: 13px; border: none; background: transparent;")
+        self.lbl_grid_title = QLabel("Active Labourers & Production Quantities")
+        self.lbl_grid_title.setProperty("class", "heading-secondary")
         grid_layout.addWidget(self.lbl_grid_title)
 
         self.prod_table = QTableWidget()
@@ -167,29 +161,29 @@ class ProductionEntryView(QWidget):
         self.btn_new.setShortcut("Ctrl+N")
         self.btn_new.clicked.connect(self._on_new_clicked)
 
-        self.btn_save = make_pill("💾 Save", "#0284C7", "#0369A1")
+        self.btn_save = make_pill("Save", "#0284C7", "#0369A1")
         self.btn_save.setShortcut("Ctrl+S")
         self.btn_save.clicked.connect(self._on_save_clicked)
 
-        self.btn_update = make_pill("🔄 Edit / Update", "#0284C7", "#0369A1")
+        self.btn_update = make_pill("Edit / Update", "#0284C7", "#0369A1")
         self.btn_update.clicked.connect(self._on_save_clicked)
 
-        self.btn_delete = make_pill("❌ Delete", "#E11D48", "#BE123C")
+        self.btn_delete = make_pill("Delete", "#E11D48", "#BE123C")
         self.btn_delete.clicked.connect(self._on_delete_clicked)
 
-        self.btn_view = make_pill("👁️ View Entry", "#475569", "#334155")
+        self.btn_view = make_pill("View Entry", "#475569", "#334155")
         self.btn_view.clicked.connect(self._on_view_clicked)
 
-        self.btn_clear = make_pill("🧹 Clear", "#64748B", "#475569")
+        self.btn_clear = make_pill("Clear", "#64748B", "#475569")
         self.btn_clear.clicked.connect(self._clear_form)
 
-        self.btn_print = make_pill("🖨️ Print", "#334155", "#1E293B")
+        self.btn_print = make_pill("Print", "#334155", "#1E293B")
         self.btn_print.clicked.connect(self._on_print_clicked)
 
-        self.btn_export = make_pill("📊 Export Excel", "#059669", "#047857")
+        self.btn_export = make_pill("Export Excel", "#059669", "#047857")
         self.btn_export.clicked.connect(self._on_export_excel_clicked)
 
-        self.btn_close = make_pill("❌ Close", "#94A3B8", "#64748B")
+        self.btn_close = make_pill("Close", "#94A3B8", "#64748B")
         self.btn_close.clicked.connect(self._on_close_clicked)
 
         btn_bar.addWidget(self.btn_new)
@@ -206,14 +200,12 @@ class ProductionEntryView(QWidget):
 
         # 5. LOWER HISTORY & SEARCH CARD
         history_card = QFrame()
-        history_card.setStyleSheet(
-            "QFrame { background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 8px; padding: 10px; }"
-        )
+        history_card.setProperty("class", "card-panel")
         h_layout = QVBoxLayout(history_card)
         h_layout.setSpacing(8)
 
-        lbl_hist_title = QLabel("📜 Historical Production Entries")
-        lbl_hist_title.setStyleSheet("font-weight: 700; color: #1E293B; font-size: 13px; border: none; background: transparent;")
+        lbl_hist_title = QLabel("Historical Production Entries")
+        lbl_hist_title.setProperty("class", "heading-secondary")
         h_layout.addWidget(lbl_hist_title)
 
         self.history_table = QTableWidget()
@@ -344,7 +336,7 @@ class ProductionEntryView(QWidget):
                         item.setText(f"{qty:g}")
 
             category_title = self.cmb_account_type.currentText()
-            self.lbl_grid_title.setText(f"✏️ Editing Existing Entry PRD-{entry['ProductionID']:04d} for {entry['EntryDate']} ({category_title})")
+            self.lbl_grid_title.setText(f"Editing Existing Entry PRD-{entry['ProductionID']:04d} for {entry['EntryDate']} ({category_title})")
         else:
             self.is_edit_mode = False
             self.selected_production_id = None
@@ -352,7 +344,7 @@ class ProductionEntryView(QWidget):
             self.txt_remarks.clear()
 
             category_title = self.cmb_account_type.currentText()
-            self.lbl_grid_title.setText(f"✨ New Production Entry for {entry_date.strftime('%Y-%m-%d')} ({category_title})")
+            self.lbl_grid_title.setText(f"New Production Entry for {entry_date.strftime('%Y-%m-%d')} ({category_title})")
         self._ignore_signals = False
         self.is_dirty = False
 
@@ -434,7 +426,7 @@ class ProductionEntryView(QWidget):
             self.prod_table.setRowHeight(row, 40)
 
         category_label_title = self.cmb_account_type.currentText()
-        self.lbl_grid_title.setText(f"📋 Active Labourers ({category_label_title}) & Production Quantities")
+        self.lbl_grid_title.setText(f"Active Labourers ({category_label_title}) & Production Quantities")
 
     def _load_history_entries(self):
         entries = ProductionService.search_production_entries()

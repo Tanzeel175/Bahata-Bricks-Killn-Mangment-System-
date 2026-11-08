@@ -6,12 +6,14 @@ from PySide6.QtWidgets import (
     QHeaderView, QDialog, QDialogButtonBox, QTextEdit, QFrame, QScrollArea,
     QFileDialog, QMessageBox
 )
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal, QTimer
+from PySide6.QtGui import QColor, QFont
 from app.services.labour_service import LabourService
 from app.security.session import current_session
 from app.ui.components.toast import ToastNotification
 from app.ui.components.formatted_inputs import CNICLineEdit, PhoneLineEdit, NumericLineEdit
 from app.ui.views.account_type_dialog import AccountTypeManagementDialog
+from app.ui.theme_manager import theme_mgr
 
 
 class LabourMasterView(QWidget):
@@ -30,37 +32,66 @@ class LabourMasterView(QWidget):
         self.selected_worker_id = None
 
         self._init_ui()
+        theme_mgr.theme_changed.connect(self._on_theme_changed)
         self.refresh_data()
 
     def _init_ui(self):
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(12, 12, 12, 12)
-        main_layout.setSpacing(10)
+        main_layout.setContentsMargins(14, 14, 14, 14)
+        main_layout.setSpacing(12)
 
-        # 1. TOP HEADER TITLE
+        # 1. TOP MODULE SUBHEADER (Matching BAHTA Stitch Header)
         header_box = QHBoxLayout()
+        header_box.setContentsMargins(0, 0, 0, 4)
+        header_box.setSpacing(16)
+
         title_box = QVBoxLayout()
-        t = QLabel("Labour & Party Master Management")
-        t.setStyleSheet("font-size: 20px; font-weight: 800; color: #0F172A;")
-        sub = QLabel("Master dataset for Pathera, Nakkasi, Jamadars, Transporters, Customers, and Kiln Workers")
-        sub.setStyleSheet("font-size: 12px; color: #64748B;")
-        title_box.addWidget(t)
-        title_box.addWidget(sub)
+        title_box.setSpacing(2)
+
+        title_row = QHBoxLayout()
+        title_row.setSpacing(10)
+        self.lbl_view_title = QLabel("Labour & Party Master Management")
+        self.lbl_view_title.setProperty("class", "heading-primary")
+        self.lbl_view_title.setStyleSheet("font-size: 19px; font-weight: 800; letter-spacing: -0.01em; border: none; background: transparent;")
+        title_row.addWidget(self.lbl_view_title)
+
+        self.mod_badge = QLabel("Active Module")
+        self.mod_badge.setStyleSheet(
+            "border-radius: 9999px; font-size: 11px; font-weight: 700; padding: 2px 10px;"
+        )
+        title_row.addWidget(self.mod_badge)
+        title_row.addStretch()
+        title_box.addLayout(title_row)
+
+        self.lbl_view_sub = QLabel("Master dataset for Pathera, Nakkasi, Jamadars, Transporters, Customers, and Kiln Workers.")
+        self.lbl_view_sub.setStyleSheet("font-size: 12px; font-weight: 500; border: none; background: transparent;")
+        title_box.addWidget(self.lbl_view_sub)
         header_box.addLayout(title_box)
         header_box.addStretch()
 
-        if current_session.is_admin:
-            self.btn_manage_types = QPushButton("⚙️ Manage Categories")
-            self.btn_manage_types.setStyleSheet(
-                "QPushButton { background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 6px; padding: 6px 12px; font-weight: 600; } "
-                "QPushButton:hover { background-color: #F1F5F9; }"
-            )
-            self.btn_manage_types.clicked.connect(self._on_manage_types)
-            header_box.addWidget(self.btn_manage_types)
+        # Top Header Action Buttons
+        top_actions_box = QHBoxLayout()
+        top_actions_box.setSpacing(8)
 
+        if current_session.is_admin:
+            self.btn_manage_types = QPushButton("Manage Categories")
+            self.btn_manage_types.setProperty("class", "btn-secondary")
+            self.btn_manage_types.setMinimumHeight(34)
+            self.btn_manage_types.setCursor(Qt.PointingHandCursor)
+            self.btn_manage_types.clicked.connect(self._on_manage_types)
+            top_actions_box.addWidget(self.btn_manage_types)
+
+        self.btn_export_top = QPushButton("Export View")
+        self.btn_export_top.setProperty("class", "btn-primary")
+        self.btn_export_top.setMinimumHeight(34)
+        self.btn_export_top.setCursor(Qt.PointingHandCursor)
+        self.btn_export_top.clicked.connect(self._on_export_excel_clicked)
+        top_actions_box.addWidget(self.btn_export_top)
+
+        header_box.addLayout(top_actions_box)
         main_layout.addLayout(header_box)
 
-        # Scrollable container for the entire view (ensuring no vertical clipping on smaller screens)
+        # Scrollable container for the entire view (ensuring laptop friendliness)
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setFrameShape(QFrame.NoFrame)
@@ -68,220 +99,284 @@ class LabourMasterView(QWidget):
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
 
         container = QWidget()
+        container.setObjectName("labourScrollContainer")
+        container.setStyleSheet("#labourScrollContainer { background-color: transparent; }")
         container_layout = QVBoxLayout(container)
-        container_layout.setContentsMargins(0, 0, 8, 0)
-        container_layout.setSpacing(12)
+        container_layout.setContentsMargins(0, 0, 8, 8)
+        container_layout.setSpacing(14)
 
-        # 2. UPPER DATA ENTRY FORM CARD (3 COMPACT SIDE-BY-SIDE COLUMNS)
+        # 2. UPPER DATA ENTRY FORM CARD (3 COMPACT BALANCED COLUMNS)
         form_card = QFrame()
-        form_card.setStyleSheet(
-            "QFrame { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px; }"
-        )
-        form_hbox = QHBoxLayout(form_card)
-        form_hbox.setContentsMargins(10, 10, 10, 10)
-        form_hbox.setSpacing(18)
+        form_card.setObjectName("form_card")
+        form_card.setProperty("class", "card-panel")
+        form_card_vbox = QVBoxLayout(form_card)
+        form_card_vbox.setContentsMargins(0, 0, 0, 16)
+        form_card_vbox.setSpacing(14)
 
-        def make_field_heading(text, required=False):
+        # Card Header Strip
+        form_header = QFrame()
+        form_header.setObjectName("formCardHeader")
+        form_header.setStyleSheet("padding: 10px 18px;")
+        fh_layout = QHBoxLayout(form_header)
+        fh_layout.setContentsMargins(0, 0, 0, 0)
+        fh_layout.setSpacing(8)
+
+        fh_icon = QLabel("🪪")
+        fh_icon.setStyleSheet("font-size: 14px;")
+        fh_layout.addWidget(fh_icon)
+
+        self.fh_title = QLabel("WORKER PROFILE & MASTER DETAILS")
+        self.fh_title.setStyleSheet("font-size: 11.5px; font-weight: 800; letter-spacing: 0.8px; border: none; background: transparent;")
+        fh_layout.addWidget(self.fh_title)
+        fh_layout.addStretch()
+
+        fh_note = QLabel('Fields marked with <font color="#E11D48"><b>*</b></font> are mandatory')
+        fh_note.setStyleSheet("font-size: 11px; color: #64748B; font-weight: 500;")
+        fh_layout.addWidget(fh_note)
+
+        form_card_vbox.addWidget(form_header)
+
+        # 3-Column Form Grid Container
+        form_body = QWidget()
+        form_hbox = QHBoxLayout(form_body)
+        form_hbox.setContentsMargins(18, 0, 18, 0)
+        form_hbox.setSpacing(20)
+
+        def make_field_heading(text, required=False, subtext=None):
+            box = QHBoxLayout()
+            box.setContentsMargins(0, 0, 0, 0)
+            box.setSpacing(4)
             lbl = QLabel(text)
             lbl.setStyleSheet(
                 f"font-weight: {'700' if required else '600'}; "
-                f"color: {'#0F172A' if required else '#475569'}; "
-                "font-size: 11px; border: none; background: transparent; margin: 0px; padding: 0px;"
+                "font-size: 11.5px; color: #334155; border: none; background: transparent; margin: 0px;"
             )
-            return lbl
+            box.addWidget(lbl)
+            if required:
+                req = QLabel("*")
+                req.setStyleSheet("color: #E11D48; font-weight: bold; font-size: 12px; margin: 0px;")
+                box.addWidget(req)
+            if subtext:
+                box.addStretch()
+                sub_lbl = QLabel(subtext)
+                sub_lbl.setStyleSheet("font-size: 10.5px; color: #94A3B8; font-weight: 500;")
+                box.addWidget(sub_lbl)
+            else:
+                box.addStretch()
+            return box
 
-        # --- COLUMN 1 ---
+        # --- COLUMN 1: Primary Identification ---
         col1_layout = QVBoxLayout()
         col1_layout.setSpacing(4)
 
+        # Worker ID input with prefix group
+        wid_box = QHBoxLayout()
+        wid_box.setSpacing(0)
+        id_badge = QLabel("ID")
+        self.id_badge = QLabel("ID")
+        self.id_badge.setFixedWidth(36)
+        self.id_badge.setAlignment(Qt.AlignCenter)
+        wid_box.addWidget(self.id_badge)
+
         self.txt_worker_id = QLineEdit()
-        self.txt_worker_id.setPlaceholderText("WRK-0001 (Auto or enter ID to load & edit)")
-        self.txt_worker_id.setMinimumHeight(28)
+        self.txt_worker_id.setPlaceholderText("WRK-0001 (Auto or edit)")
+        self.txt_worker_id.setMinimumHeight(32)
         self.txt_worker_id.textEdited.connect(self._on_worker_id_input_changed)
         self.txt_worker_id.returnPressed.connect(self._on_worker_id_return_pressed)
+        wid_box.addWidget(self.txt_worker_id, stretch=1)
+
+        self.btn_edit_id = QPushButton("Edit")
+        self.btn_edit_id.setCursor(Qt.PointingHandCursor)
+        self.btn_edit_id.clicked.connect(self._on_worker_id_return_pressed)
+        wid_box.addWidget(self.btn_edit_id)
 
         self.txt_english_name = QLineEdit()
         self.txt_english_name.setPlaceholderText("Full Name in English")
-        self.txt_english_name.setMinimumHeight(28)
+        self.txt_english_name.setMinimumHeight(32)
 
         self.txt_urdu_name = QLineEdit()
-        self.txt_urdu_name.setPlaceholderText("نام (اردو Unicode)")
-        self.txt_urdu_name.setMinimumHeight(28)
+        self.txt_urdu_name.setPlaceholderText("اردو میں نام درج کریں")
+        self.txt_urdu_name.setLayoutDirection(Qt.RightToLeft)
+        self.txt_urdu_name.setAlignment(Qt.AlignRight)
+        urdu_f = QFont("Noto Nastaliq Urdu", 11)
+        self.txt_urdu_name.setFont(urdu_f)
+        self.txt_urdu_name.setMinimumHeight(32)
 
         self.txt_father_name = QLineEdit()
         self.txt_father_name.setPlaceholderText("Father Name")
-        self.txt_father_name.setMinimumHeight(28)
+        self.txt_father_name.setMinimumHeight(32)
 
         self.txt_address = QLineEdit()
         self.txt_address.setPlaceholderText("City, Tehsil, Village Address")
-        self.txt_address.setMinimumHeight(28)
+        self.txt_address.setMinimumHeight(32)
 
-        col1_layout.addWidget(make_field_heading("Worker ID (Auto or Enter ID to Edit)*", required=True))
-        col1_layout.addWidget(self.txt_worker_id)
-        col1_layout.addSpacing(2)
+        col1_layout.addLayout(make_field_heading("Worker ID", required=True, subtext="(Auto or Enter ID to Edit)"))
+        col1_layout.addLayout(wid_box)
+        col1_layout.addSpacing(4)
 
-        col1_layout.addWidget(make_field_heading("English Name*", required=True))
+        col1_layout.addLayout(make_field_heading("English Name", required=True))
         col1_layout.addWidget(self.txt_english_name)
-        col1_layout.addSpacing(2)
+        col1_layout.addSpacing(4)
 
-        col1_layout.addWidget(make_field_heading("Urdu Name (Optional)"))
+        col1_layout.addLayout(make_field_heading("Urdu Name", required=False, subtext="نام (اردو Unicode)"))
         col1_layout.addWidget(self.txt_urdu_name)
-        col1_layout.addSpacing(2)
+        col1_layout.addSpacing(4)
 
-        col1_layout.addWidget(make_field_heading("Father Name"))
+        col1_layout.addLayout(make_field_heading("Father Name"))
         col1_layout.addWidget(self.txt_father_name)
-        col1_layout.addSpacing(2)
+        col1_layout.addSpacing(4)
 
-        col1_layout.addWidget(make_field_heading("Postal Address"))
+        col1_layout.addLayout(make_field_heading("Postal Address"))
         col1_layout.addWidget(self.txt_address)
 
         form_hbox.addLayout(col1_layout, stretch=1)
 
-        # --- COLUMN 2 ---
+        # --- COLUMN 2: Category & Contact Details ---
         col2_layout = QVBoxLayout()
         col2_layout.setSpacing(4)
 
         self.cmb_account_type = QComboBox()
-        self.cmb_account_type.setMinimumHeight(28)
+        self.cmb_account_type.setMinimumHeight(32)
 
         self.txt_cnic = CNICLineEdit()
-        self.txt_cnic.setMinimumHeight(28)
+        self.txt_cnic.setMinimumHeight(32)
 
         self.txt_mobile = PhoneLineEdit()
-        self.txt_mobile.setMinimumHeight(28)
+        self.txt_mobile.setMinimumHeight(32)
 
         self.txt_ref_name = QLineEdit()
         self.txt_ref_name.setPlaceholderText("Guarantor Name")
-        self.txt_ref_name.setMinimumHeight(28)
+        self.txt_ref_name.setMinimumHeight(32)
 
         self.txt_ref_mobile = PhoneLineEdit()
-        self.txt_ref_mobile.setMinimumHeight(28)
+        self.txt_ref_mobile.setMinimumHeight(32)
 
-        col2_layout.addWidget(make_field_heading("Account Category*", required=True))
+        col2_layout.addLayout(make_field_heading("Account Category", required=True))
         col2_layout.addWidget(self.cmb_account_type)
-        col2_layout.addSpacing(2)
+        col2_layout.addSpacing(4)
 
-        col2_layout.addWidget(make_field_heading("CNIC (Optional)", required=False))
+        col2_layout.addLayout(make_field_heading("CNIC", required=False, subtext="(National ID / Optional)"))
         col2_layout.addWidget(self.txt_cnic)
-        col2_layout.addSpacing(2)
+        col2_layout.addSpacing(4)
 
-        col2_layout.addWidget(make_field_heading("Mobile Number (Optional)", required=False))
+        col2_layout.addLayout(make_field_heading("Mobile Number", required=False, subtext="(Optional)"))
         col2_layout.addWidget(self.txt_mobile)
-        col2_layout.addSpacing(2)
+        col2_layout.addSpacing(4)
 
-        col2_layout.addWidget(make_field_heading("Reference Person Name (Optional)", required=False))
+        col2_layout.addLayout(make_field_heading("Reference Person Name", required=False, subtext="(Guarantor)"))
         col2_layout.addWidget(self.txt_ref_name)
-        col2_layout.addSpacing(2)
+        col2_layout.addSpacing(4)
 
-        col2_layout.addWidget(make_field_heading("Reference Mobile (Optional)", required=False))
+        col2_layout.addLayout(make_field_heading("Reference Mobile", required=False, subtext="(Optional)"))
         col2_layout.addWidget(self.txt_ref_mobile)
 
         form_hbox.addLayout(col2_layout, stretch=1)
 
-        # --- COLUMN 3 ---
+        # --- COLUMN 3: Targets, Status & Controls ---
         col3_layout = QVBoxLayout()
         col3_layout.setSpacing(4)
 
         self.txt_modular_target = NumericLineEdit()
-        self.txt_modular_target.setMinimumHeight(28)
+        self.txt_modular_target.setMinimumHeight(32)
 
         self.txt_filler_target = NumericLineEdit()
-        self.txt_filler_target.setMinimumHeight(28)
+        self.txt_filler_target.setMinimumHeight(32)
 
         self.txt_remarks = QLineEdit()
         self.txt_remarks.setPlaceholderText("Internal notes or comments...")
-        self.txt_remarks.setMinimumHeight(28)
+        self.txt_remarks.setMinimumHeight(32)
 
-        col3_layout.addWidget(make_field_heading("Module Target/Day"))
+        col3_layout.addLayout(make_field_heading("Module Target/Day"))
         col3_layout.addWidget(self.txt_modular_target)
-        col3_layout.addSpacing(2)
-
-        col3_layout.addWidget(make_field_heading("Filler Target/Day"))
-        col3_layout.addWidget(self.txt_filler_target)
-        col3_layout.addSpacing(2)
-
-        col3_layout.addWidget(make_field_heading("Remarks / Internal Notes"))
-        col3_layout.addWidget(self.txt_remarks)
         col3_layout.addSpacing(4)
 
-        # Omit Status Card Box
-        omit_card = QFrame()
-        omit_card.setStyleSheet(
-            "QFrame { background-color: #FEF9C3; border: 1px solid #FDE047; border-radius: 6px; padding: 6px; }"
-        )
-        omit_layout = QVBoxLayout(omit_card)
-        omit_layout.setSpacing(2)
+        col3_layout.addLayout(make_field_heading("Filler Target/Day"))
+        col3_layout.addWidget(self.txt_filler_target)
+        col3_layout.addSpacing(4)
+
+        col3_layout.addLayout(make_field_heading("Remarks / Internal Notes"))
+        col3_layout.addWidget(self.txt_remarks)
+        col3_layout.addSpacing(6)
+
+        # Omit Status Warning Card Box
+        self.omit_card = QFrame()
+        self.omit_card.setObjectName("omitCard")
+        self.omit_card.setStyleSheet("padding: 8px 12px;")
+        omit_layout = QVBoxLayout(self.omit_card)
+        omit_layout.setSpacing(3)
 
         self.chk_omit_status = QCheckBox("Omit Account (Read-Only Status)")
-        self.chk_omit_status.setStyleSheet("font-weight: 700; color: #854D0E; font-size: 11px; border: none; background: transparent;")
         self.chk_omit_status.toggled.connect(self._on_omit_checkbox_toggled)
 
-        lbl_reason_title = QLabel("Reason for Omitting Account:")
-        lbl_reason_title.setStyleSheet("font-size: 10px; font-weight: 600; color: #713F12; border: none; background: transparent; margin-top: 2px;")
+        self.lbl_reason_title = QLabel("Reason for Omitting Account:")
+        self.lbl_reason_title.setStyleSheet("font-size: 10.5px; font-weight: 600; border: none; background: transparent; margin-top: 2px;")
 
         self.txt_omit_reason = QLineEdit()
         self.txt_omit_reason.setPlaceholderText("Enter reason if omitting...")
-        self.txt_omit_reason.setFixedHeight(24)
-        self.txt_omit_reason.setStyleSheet("background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 4px; font-size: 11px;")
+        self.txt_omit_reason.setFixedHeight(26)
+        self.txt_omit_reason.setStyleSheet("border-radius: 4px; font-size: 11px;")
 
         self.lbl_omit_date = QLabel("Omit Date: N/A")
-        self.lbl_omit_date.setStyleSheet("font-size: 10px; color: #854D0E; font-weight: 500; border: none; background: transparent; margin-top: 2px;")
+        self.lbl_omit_date.setStyleSheet("font-size: 10px; font-weight: 600; border: none; background: transparent; margin-top: 2px;")
 
         omit_layout.addWidget(self.chk_omit_status)
-        omit_layout.addWidget(lbl_reason_title)
+        omit_layout.addWidget(self.lbl_reason_title)
         omit_layout.addWidget(self.txt_omit_reason)
         omit_layout.addWidget(self.lbl_omit_date)
 
-        col3_layout.addWidget(omit_card)
+        col3_layout.addWidget(self.omit_card)
         form_hbox.addLayout(col3_layout, stretch=1)
 
+        form_card_vbox.addWidget(form_body)
         container_layout.addWidget(form_card)
 
-        # 3. MIDDLE ACTION BUTTON BAR (ROUNDED PILLS)
+        # 3. MIDDLE ACTION BUTTON BAR (Matching BAHTA Stitch Action Palette)
         btn_bar = QHBoxLayout()
         btn_bar.setSpacing(8)
 
-        # Button styling helpers
-        def make_pill(text, bg_color, hover_color, text_color="#FFFFFF"):
+        def make_pill(text, bg_color, hover_color, text_color="#FFFFFF", border_color=None):
             btn = QPushButton(text)
             btn.setMinimumHeight(36)
+            btn.setCursor(Qt.PointingHandCursor)
+            border_qss = f"border: 1px solid {border_color};" if border_color else "border: none;"
             btn.setStyleSheet(
-                f"QPushButton {{ background-color: {bg_color}; color: {text_color}; font-weight: 700; font-size: 12px; border-radius: 6px; padding: 6px 14px; border: none; }} "
+                f"QPushButton {{ background-color: {bg_color}; color: {text_color}; font-weight: 700; "
+                f"font-size: 12px; border-radius: 6px; padding: 6px 14px; {border_qss} }} "
                 f"QPushButton:hover {{ background-color: {hover_color}; }} "
-                f"QPushButton:disabled {{ background-color: #E2E8F0; color: #94A3B8; }}"
+                f"QPushButton:disabled {{ background-color: #E2E8F0; color: #94A3B8; border: none; }}"
             )
             return btn
 
-        self.btn_new = make_pill("+ New", "#0284C7", "#0369A1")
+        self.btn_new = make_pill("+ New", "#2563EB", "#1D4ED8")
         self.btn_new.setShortcut("Ctrl+N")
         self.btn_new.clicked.connect(self._on_new_clicked)
 
-        self.btn_save = make_pill("💾 Save", "#0284C7", "#0369A1")
+        self.btn_save = make_pill("Save", "#0284C7", "#0369A1")
         self.btn_save.setShortcut("Ctrl+S")
         self.btn_save.clicked.connect(self._on_save_clicked)
 
-        self.btn_update = make_pill("🔄 Update", "#0284C7", "#0369A1")
+        self.btn_update = make_pill("Update", "#4F46E5", "#4338CA")
         self.btn_update.clicked.connect(self._on_save_clicked)
 
-        self.btn_delete = make_pill("❌ Delete", "#E11D48", "#BE123C")
+        self.btn_delete = make_pill("Delete", "#E11D48", "#BE123C")
         self.btn_delete.clicked.connect(self._on_delete_clicked)
 
-        self.btn_omit = make_pill("🚫 Omit", "#E11D48", "#BE123C")
+        self.btn_omit = make_pill("Omit", "#DB2777", "#BE185D")
         self.btn_omit.clicked.connect(self._on_omit_clicked)
 
-        self.btn_restore = make_pill("🟢 Restore", "#16A34A", "#15803D")
+        self.btn_restore = make_pill("Restore", "#059669", "#047857")
         self.btn_restore.clicked.connect(self._on_restore_clicked)
 
-        self.btn_clear = make_pill("🧹 Clear", "#64748B", "#475569")
+        self.btn_clear = make_pill("Clear", "#475569", "#334155")
         self.btn_clear.clicked.connect(self._clear_form)
 
-        self.btn_print = make_pill("🖨️ Print", "#334155", "#1E293B")
+        self.btn_print = make_pill("Print", "#0F172A", "#1E293B")
         self.btn_print.clicked.connect(self._on_print_clicked)
 
-        self.btn_export = make_pill("📊 Export Excel", "#059669", "#047857")
+        self.btn_export = make_pill("Export Excel", "#0D9488", "#0F766E")
         self.btn_export.clicked.connect(self._on_export_excel_clicked)
 
-        self.btn_close = make_pill("❌ Close", "#94A3B8", "#64748B")
+        self.btn_close = make_pill("Close", "#E2E8F0", "#CBD5E1", text_color="#334155", border_color="#CBD5E1")
         self.btn_close.clicked.connect(self._on_close_clicked)
 
         btn_bar.addWidget(self.btn_new)
@@ -297,26 +392,26 @@ class LabourMasterView(QWidget):
 
         container_layout.addLayout(btn_bar)
 
-        # 4. LOWER SEARCH FILTERS & DATA GRID TABLE CARD
+        # 4. LOWER MASTER RECORDS TABLE CONTAINER (Matching Stitch Data Grid)
         grid_card = QFrame()
-        grid_card.setStyleSheet(
-            "QFrame { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; padding: 12px; }"
-        )
+        grid_card.setObjectName("grid_card")
+        grid_card.setProperty("class", "card-panel")
         grid_card_layout = QVBoxLayout(grid_card)
-        grid_card_layout.setSpacing(10)
+        grid_card_layout.setContentsMargins(16, 14, 16, 16)
+        grid_card_layout.setSpacing(12)
 
-        # Filter Bar Row
+        # Filter Bar Row with Record Count Badge
         filter_bar = QHBoxLayout()
         filter_bar.setSpacing(12)
 
         lbl_cat_flt = QLabel("Account Category Filter:")
-        lbl_cat_flt.setStyleSheet("font-weight: 700; color: #334155; font-size: 12px;")
+        lbl_cat_flt.setStyleSheet("font-weight: 700; font-size: 11.5px; color: #475569;")
         self.cmb_filter_type = QComboBox()
         self.cmb_filter_type.setMinimumHeight(32)
         self.cmb_filter_type.currentIndexChanged.connect(self._on_filter_changed)
 
         lbl_sts_flt = QLabel("Account Status Filter:")
-        lbl_sts_flt.setStyleSheet("font-weight: 700; color: #334155; font-size: 12px;")
+        lbl_sts_flt.setStyleSheet("font-weight: 700; font-size: 11.5px; color: #475569;")
         self.cmb_filter_status = QComboBox()
         self.cmb_filter_status.setMinimumHeight(32)
         self.cmb_filter_status.addItems(["Active Accounts Only", "All Accounts (Active & Omitted)", "Omitted Accounts Only"])
@@ -324,36 +419,48 @@ class LabourMasterView(QWidget):
 
         self.txt_search = QLineEdit()
         self.txt_search.setMinimumHeight(32)
-        self.txt_search.setPlaceholderText("Search by Worker ID, Name, CNIC, Mobile...")
+        self.txt_search.setPlaceholderText("Search by Name, ID, Phone, CNIC... (Ctrl+K)")
+        self._search_timer = QTimer(self)
+        self._search_timer.setSingleShot(True)
+        self._search_timer.setInterval(200)
+        self._search_timer.timeout.connect(self._execute_search)
         self.txt_search.textChanged.connect(self._on_search_text_changed)
+
+        self.lbl_record_count = QLabel("0 Accounts")
+        self.lbl_record_count.setStyleSheet(
+            "background-color: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; "
+            "border-radius: 6px; font-size: 11.5px; font-weight: 700; padding: 4px 12px;"
+        )
 
         filter_bar.addWidget(lbl_cat_flt)
         filter_bar.addWidget(self.cmb_filter_type, stretch=1)
         filter_bar.addWidget(lbl_sts_flt)
         filter_bar.addWidget(self.cmb_filter_status, stretch=1)
         filter_bar.addWidget(self.txt_search, stretch=2)
+        filter_bar.addWidget(self.lbl_record_count)
 
         grid_card_layout.addLayout(filter_bar)
 
         # Data Grid Table
         self.table = QTableWidget()
         headers = [
-            "Worker ID", "Category", "Name", "CNIC", "Mobile", "Created Date", "Status"
+            "#", "Worker ID", "Category", "Worker Name", "CNIC", "Mobile", "Created Date", "Status"
         ]
         self.table.setColumnCount(len(headers))
         self.table.setHorizontalHeaderLabels(headers)
-        self.table.horizontalHeader().setMinimumHeight(54)
+        self.table.horizontalHeader().setMinimumHeight(40)
         self.table.horizontalHeader().setDefaultAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.table.horizontalHeader().setStretchLastSection(True)
 
-        self.table.setColumnWidth(0, 120)  # Worker ID
-        self.table.setColumnWidth(1, 150)  # Category
-        self.table.setColumnWidth(2, 220)  # Name
-        self.table.setColumnWidth(3, 160)  # CNIC
-        self.table.setColumnWidth(4, 140)  # Mobile
-        self.table.setColumnWidth(5, 160)  # Created Date
-        self.table.setColumnWidth(6, 100)  # Status
+        self.table.setColumnWidth(0, 48)   # #
+        self.table.setColumnWidth(1, 110)  # Worker ID
+        self.table.setColumnWidth(2, 130)  # Category
+        self.table.setColumnWidth(3, 240)  # Name
+        self.table.setColumnWidth(4, 140)  # CNIC
+        self.table.setColumnWidth(5, 130)  # Mobile
+        self.table.setColumnWidth(6, 120)  # Created Date
+        self.table.setColumnWidth(7, 100)  # Status
 
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.setSelectionMode(QTableWidget.SingleSelection)
@@ -361,7 +468,7 @@ class LabourMasterView(QWidget):
         self.table.setAutoScroll(False)
         self.table.setVerticalScrollMode(QTableWidget.ScrollPerPixel)
         self.table.setHorizontalScrollMode(QTableWidget.ScrollPerPixel)
-        self.table.setMinimumHeight(240)
+        self.table.setMinimumHeight(280)
         self.table.itemDoubleClicked.connect(self._on_row_double_clicked)
         self.table.itemClicked.connect(self._on_row_clicked)
 
@@ -409,30 +516,86 @@ class LabourMasterView(QWidget):
         if status_idx == 2:
             accounts = [a for a in accounts if a["IsOmitted"]]
 
+        self.table.setUpdatesEnabled(False)
+        self.table.blockSignals(True)
         self.table.setRowCount(len(accounts))
+        if hasattr(self, "lbl_record_count"):
+            self.lbl_record_count.setText(f"{len(accounts)} Accounts")
+
+        mono_font = QFont("Consolas", 10)
+        mono_font.setStyleHint(QFont.Monospace)
 
         for row, a in enumerate(accounts):
-            self.table.setItem(row, 0, QTableWidgetItem(a["WorkerID"]))
-            self.table.setItem(row, 1, QTableWidgetItem(a["AccountTypeName"]))
-            self.table.setItem(row, 2, QTableWidgetItem(a["EnglishName"]))
-            self.table.setItem(row, 3, QTableWidgetItem(a["CNIC"]))
-            self.table.setItem(row, 4, QTableWidgetItem(a["Mobile"]))
-            self.table.setItem(row, 5, QTableWidgetItem(a["CreatedDate"]))
+            # 0: # (Index)
+            num_item = QTableWidgetItem(f"{row + 1}")
+            num_item.setTextAlignment(Qt.AlignCenter)
+            num_item.setForeground(QColor("#64748B"))
+            num_item.setData(Qt.UserRole, a)
+            self.table.setItem(row, 0, num_item)
 
-            status_str = "Omitted" if a["IsOmitted"] else "Active"
+            # 1: Worker ID
+            wid_item = QTableWidgetItem(a.get("WorkerID", ""))
+            wid_item.setFont(mono_font)
+            wid_item.setForeground(QColor("#2563EB"))
+            wid_item.setData(Qt.UserRole, a)
+            self.table.setItem(row, 1, wid_item)
+
+            # 2: Category
+            cat_item = QTableWidgetItem(a.get("AccountTypeName", "") or "—")
+            cat_item.setData(Qt.UserRole, a)
+            self.table.setItem(row, 2, cat_item)
+
+            # 3: Worker Name (Bilingual if Urdu is present)
+            eng = a.get("EnglishName", "")
+            urdu = a.get("UrduName", "")
+            display_name = f"{eng}  ({urdu})" if urdu else eng
+            name_item = QTableWidgetItem(display_name)
+            name_item.setData(Qt.UserRole, a)
+            self.table.setItem(row, 3, name_item)
+
+            # 4: CNIC
+            cnic_item = QTableWidgetItem(a.get("CNIC", "") or "—")
+            cnic_item.setFont(mono_font)
+            cnic_item.setData(Qt.UserRole, a)
+            self.table.setItem(row, 4, cnic_item)
+
+            # 5: Mobile
+            mob_item = QTableWidgetItem(a.get("Mobile", "") or "—")
+            mob_item.setFont(mono_font)
+            mob_item.setData(Qt.UserRole, a)
+            self.table.setItem(row, 5, mob_item)
+
+            # 6: Created Date
+            dt_item = QTableWidgetItem(a.get("CreatedDate", "") or "—")
+            dt_item.setData(Qt.UserRole, a)
+            self.table.setItem(row, 6, dt_item)
+
+            # 7: Status
+            is_omitted = bool(a.get("IsOmitted"))
+            status_str = "Omitted" if is_omitted else "Active"
             status_item = QTableWidgetItem(status_str)
-            status_item.setForeground(Qt.red if a["IsOmitted"] else Qt.darkGreen)
-            self.table.setItem(row, 6, status_item)
+            status_item.setTextAlignment(Qt.AlignCenter)
+            if is_omitted:
+                status_item.setForeground(QColor("#B45309"))
+            else:
+                status_item.setForeground(QColor("#15803D"))
+            status_item.setData(Qt.UserRole, a)
+            self.table.setItem(row, 7, status_item)
 
-            self.table.item(row, 0).setData(Qt.UserRole, a)
-            self.table.setRowHeight(row, 40)
+            self.table.setRowHeight(row, 38)
+
+        self.table.blockSignals(False)
+        self.table.setUpdatesEnabled(True)
 
         self.table.clearSelection()
         self.table.verticalScrollBar().setValue(0)
         self.table.scrollToTop()
 
     def _on_search_text_changed(self):
-        self._execute_search()
+        if hasattr(self, "_search_timer"):
+            self._search_timer.start()
+        else:
+            self._execute_search()
 
     def _on_filter_changed(self):
         self._execute_search()
@@ -710,3 +873,68 @@ class LabourMasterView(QWidget):
         dlg = AccountTypeManagementDialog(parent=self)
         dlg.exec()
         self.refresh_data()
+
+    def _on_theme_changed(self, _theme: str = ""):
+        is_dark = theme_mgr.is_dark_mode()
+
+        # 1. Module Badge
+        if hasattr(self, "mod_badge"):
+            if is_dark:
+                self.mod_badge.setStyleSheet(
+                    "background-color: rgba(37, 99, 235, 0.2); color: #93C5FD; border: 1px solid #1D4ED8; "
+                    "border-radius: 9999px; font-size: 11px; font-weight: 700; padding: 2px 10px;"
+                )
+            else:
+                self.mod_badge.setStyleSheet(
+                    "background-color: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; "
+                    "border-radius: 9999px; font-size: 11px; font-weight: 700; padding: 2px 10px;"
+                )
+
+        # 2. Worker ID Group
+        if hasattr(self, "id_badge"):
+            badge_bg = "#0F172A" if is_dark else "#F1F5F9"
+            badge_border = "#334155" if is_dark else "#CBD5E1"
+            badge_fg = "#94A3B8" if is_dark else "#64748B"
+            self.id_badge.setStyleSheet(
+                f"background-color: {badge_bg}; border: 1.5px solid {badge_border}; border-right: none; "
+                f"border-top-left-radius: 6px; border-bottom-left-radius: 6px; "
+                f"font-weight: 700; color: {badge_fg}; font-size: 11px; min-height: 28px;"
+            )
+
+        if hasattr(self, "txt_worker_id"):
+            wid_bg = "#0F172A" if is_dark else "#EFF6FF"
+            wid_fg = "#93C5FD" if is_dark else "#1E3A8A"
+            wid_border = "#334155" if is_dark else "#BFDBFE"
+            self.txt_worker_id.setStyleSheet(
+                f"QLineEdit {{ border-radius: 0px; font-weight: 800; color: {wid_fg}; background-color: {wid_bg}; border: 1.5px solid {wid_border}; }}"
+            )
+
+        if hasattr(self, "btn_edit_id"):
+            btn_bg = "#0F172A" if is_dark else "#F1F5F9"
+            btn_border = "#334155" if is_dark else "#CBD5E1"
+            btn_fg = "#E2E8F0" if is_dark else "#334155"
+            btn_hover = "#1E293B" if is_dark else "#E2E8F0"
+            self.btn_edit_id.setStyleSheet(
+                f"QPushButton {{ background-color: {btn_bg}; border: 1.5px solid {btn_border}; border-left: none; "
+                f"border-top-right-radius: 6px; border-bottom-right-radius: 6px; padding: 4px 12px; "
+                f"font-weight: 600; color: {btn_fg}; font-size: 11.5px; min-height: 28px; }} "
+                f"QPushButton:hover {{ background-color: {btn_hover}; }}"
+            )
+
+        # 3. Omit Card Checkbox & Labels
+        if hasattr(self, "chk_omit_status"):
+            chk_color = "#FDE047" if is_dark else "#854D0E"
+            chk_ind_bg = "#0F172A" if is_dark else "#FFFFFF"
+            self.chk_omit_status.setStyleSheet(
+                f"QCheckBox {{ font-weight: 700; color: {chk_color}; font-size: 11.5px; border: none; background: transparent; }} "
+                f"QCheckBox::indicator {{ width: 16px; height: 16px; border: 1.5px solid #CA8A04; border-radius: 4px; background-color: {chk_ind_bg}; }} "
+                f"QCheckBox::indicator:checked {{ background-color: #CA8A04; border-color: #A16207; }}"
+            )
+
+        if hasattr(self, "lbl_reason_title"):
+            rt_col = "#FDE047" if is_dark else "#713F12"
+            self.lbl_reason_title.setStyleSheet(f"font-size: 10.5px; font-weight: 600; color: {rt_col}; border: none; background: transparent; margin-top: 2px;")
+
+        if hasattr(self, "lbl_omit_date"):
+            od_col = "#FCD34D" if is_dark else "#854D0E"
+            self.lbl_omit_date.setStyleSheet(f"font-size: 10px; color: {od_col}; font-weight: 600; border: none; background: transparent; margin-top: 2px;")

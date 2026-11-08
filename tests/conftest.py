@@ -26,3 +26,25 @@ def setup_test_environment():
         connection._engine.dispose()
         connection._engine = None
         connection._SessionFactory = None
+
+
+def seed_test_auth():
+    from app.database.connection import get_db_session
+    from app.database.schema import User, Role
+    from app.security.hashing import hash_password
+    with get_db_session() as session:
+        admin_role = session.query(Role).filter_by(RoleName="Administrator").first()
+        munshi_role = session.query(Role).filter_by(RoleName="Munshi").first()
+        if not session.query(User).filter_by(Username="admin").first():
+            session.add(User(
+                Username="admin", FullName="Admin",
+                PasswordHash=hash_password("Admin@123"),
+                RoleID=admin_role.RoleID, IsActive=True
+            ))
+        if not session.query(User).filter_by(Username="munshi").first():
+            session.add(User(
+                Username="munshi", FullName="Munshi",
+                PasswordHash=hash_password("Munshi@123"),
+                RoleID=munshi_role.RoleID, IsActive=True
+            ))
+

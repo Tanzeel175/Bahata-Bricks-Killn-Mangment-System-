@@ -36,10 +36,10 @@ class LabourRateView(QWidget):
         # 1. TOP HEADER TITLE
         header_box = QHBoxLayout()
         title_box = QVBoxLayout()
-        t = QLabel("💰 Labour Payment Rate Management")
-        t.setStyleSheet("font-size: 20px; font-weight: 800; color: #0F172A;")
+        t = QLabel("Labour Payment Rate Management")
+        t.setProperty("role", "heading-1")
         sub = QLabel("Configure piece-rate payment rates per 1,000 production units for each labour worker & product")
-        sub.setStyleSheet("font-size: 12px; color: #64748B;")
+        sub.setProperty("role", "subtext")
         title_box.addWidget(t)
         title_box.addWidget(sub)
         header_box.addLayout(title_box)
@@ -61,14 +61,14 @@ class LabourRateView(QWidget):
 
         # 2. CATEGORY SELECTOR CARD
         cat_card = QFrame()
-        cat_card.setStyleSheet(
-            "QFrame { background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 8px; padding: 12px; }"
-        )
+        cat_card.setObjectName("cat_card")
+        cat_card.setProperty("class", "card-panel")
         c_layout = QHBoxLayout(cat_card)
+        c_layout.setContentsMargins(12, 12, 12, 12)
         c_layout.setSpacing(16)
 
         lbl_cat = QLabel("Select Labour Category:")
-        lbl_cat.setStyleSheet("font-weight: 700; color: #334155; font-size: 12px; border: none; background: transparent;")
+        lbl_cat.setStyleSheet("font-weight: 700; font-size: 12px; border: none; background: transparent;")
 
         self.cmb_account_type = QComboBox()
         self.cmb_account_type.setMinimumHeight(32)
@@ -82,14 +82,15 @@ class LabourRateView(QWidget):
 
         # 3. DYNAMIC RATE GRID CARD
         grid_card = QFrame()
-        grid_card.setStyleSheet(
-            "QFrame { background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 8px; padding: 12px; }"
-        )
+        grid_card.setObjectName("grid_card")
+        grid_card.setProperty("class", "card-panel")
         grid_layout = QVBoxLayout(grid_card)
+        grid_layout.setContentsMargins(12, 12, 12, 12)
         grid_layout.setSpacing(8)
 
-        self.lbl_grid_title = QLabel("📊 Payment Rates per 1,000 Units (PKR)")
-        self.lbl_grid_title.setStyleSheet("font-weight: 700; color: #1E293B; font-size: 13px; border: none; background: transparent;")
+        self.lbl_grid_title = QLabel("Payment Rates per 1,000 Units (PKR)")
+        self.lbl_grid_title.setProperty("class", "heading-secondary")
+        self.lbl_grid_title.setStyleSheet("font-weight: 700; font-size: 13px; border: none; background: transparent;")
         grid_layout.addWidget(self.lbl_grid_title)
 
         self.rate_table = QTableWidget()
@@ -115,13 +116,13 @@ class LabourRateView(QWidget):
             )
             return btn
 
-        self.btn_save_rates = make_pill("💾 Save All Rates", "#0284C7", "#0369A1")
+        self.btn_save_rates = make_pill("Save All Rates", "#0284C7", "#0369A1")
         self.btn_save_rates.clicked.connect(self._on_save_all_rates_clicked)
 
-        self.btn_refresh = make_pill("🔄 Refresh", "#64748B", "#475569")
+        self.btn_refresh = make_pill("Refresh", "#64748B", "#475569")
         self.btn_refresh.clicked.connect(self.refresh_data)
 
-        self.btn_close = make_pill("❌ Close", "#94A3B8", "#64748B")
+        self.btn_close = make_pill("Close", "#94A3B8", "#64748B")
         self.btn_close.clicked.connect(self._on_close_clicked)
 
         btn_bar.addWidget(self.btn_save_rates)
@@ -272,7 +273,7 @@ class LabourRateView(QWidget):
         self.is_dirty = False
 
         category_label_title = self.cmb_account_type.currentText()
-        self.lbl_grid_title.setText(f"📊 Payment Rates per 1,000 Units ({category_label_title})")
+        self.lbl_grid_title.setText(f"Payment Rates per 1,000 Units ({category_label_title})")
 
     def _on_save_all_rates_clicked(self):
         saved_count = 0

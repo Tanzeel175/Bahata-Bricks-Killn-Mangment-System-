@@ -37,17 +37,16 @@ class TransactionValidator:
         if amount > 100_000_000.0:
             return False, "Transaction amount exceeds the maximum allowable limit (Rs. 100 Million)."
 
-        # 5. Description / Narration
-        description = str(data.get("Description", "")).strip()
-        if not description:
-            return False, "Transaction narration / description is mandatory."
-
-        if len(description) > 255:
+        # 5. Description / Narration (Optional)
+        description = str(data.get("Description", "") or "").strip()
+        if description and len(description) > 255:
             return False, "Description must not exceed 255 characters."
 
         # 6. Payment Method
         method = str(data.get("PaymentMethod", "Cash")).strip()
         if not method:
             return False, "Payment method is required."
+        if method not in cls.VALID_METHODS:
+            return False, f"Invalid payment method '{method}'. Must be one of: {', '.join(cls.VALID_METHODS)}."
 
         return True, None

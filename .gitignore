@@ -1,5 +1,7 @@
 # Application SQLite Databases (SENSITIVE DATA)
 *.db
+*.db-shm
+*.db-wal
 *.sqlite
 *.sqlite3
 bahta_system.db
@@ -16,7 +18,15 @@ __pycache__/
 *$py.class
 .pytest_cache/
 
+# GitHub Workflows (Requires PAT workflow scope to push)
+.github/
+
 # IDE & Editor Settings
 .vscode/
 .idea/
 *.swp
+
+# Virtual Environments
+.venv/
+venv/
+ENV/

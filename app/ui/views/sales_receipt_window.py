@@ -24,10 +24,9 @@ class SalesReceiptWindow(QDialog):
         inv_no = sale_data.get("InvoiceNo", "")
         cust_name = sale_data.get("CustomerName", "")
 
-        self.setWindowTitle(f"🧾 Sales Receipt — {inv_no} ({cust_name})")
+        self.setWindowTitle(f"Sales Receipt — {inv_no} ({cust_name})")
         self.resize(1000, 800)
         self.setMinimumSize(850, 580)
-        self.setStyleSheet("QDialog { background-color: #F8FAFC; }")
 
         self.zoom_level = 100
         self._init_ui()
@@ -40,11 +39,10 @@ class SalesReceiptWindow(QDialog):
 
         # 1. Action Toolbar
         toolbar_frame = QFrame()
-        toolbar_frame.setStyleSheet(
-            "QFrame { background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 8px; padding: 6px; }"
-        )
+        toolbar_frame.setObjectName("toolbar_frame")
+        toolbar_frame.setProperty("class", "card-panel")
         tb_layout = QHBoxLayout(toolbar_frame)
-        tb_layout.setContentsMargins(8, 4, 8, 4)
+        tb_layout.setContentsMargins(8, 6, 8, 6)
         tb_layout.setSpacing(8)
 
         def make_btn(text, bg_color, hover_color, text_color="#FFFFFF"):
@@ -56,22 +54,22 @@ class SalesReceiptWindow(QDialog):
             )
             return btn
 
-        self.btn_print = make_btn("🖨️ Print Receipt", "#0284C7", "#0369A1")
+        self.btn_print = make_btn("Print Receipt", "#0284C7", "#0369A1")
         self.btn_print.clicked.connect(self._on_print)
 
-        self.btn_pdf = make_btn("📄 Save as PDF", "#10B981", "#059669")
+        self.btn_pdf = make_btn("Save as PDF", "#10B981", "#059669")
         self.btn_pdf.clicked.connect(self._on_save_pdf)
 
-        self.btn_zoom_in = make_btn("🔍+ Zoom In", "#64748B", "#475569")
+        self.btn_zoom_in = make_btn("Zoom +", "#64748B", "#475569")
         self.btn_zoom_in.clicked.connect(self._zoom_in)
 
-        self.btn_zoom_out = make_btn("🔍- Zoom Out", "#64748B", "#475569")
+        self.btn_zoom_out = make_btn("Zoom -", "#64748B", "#475569")
         self.btn_zoom_out.clicked.connect(self._zoom_out)
 
         self.lbl_zoom = QLabel("100%")
-        self.lbl_zoom.setStyleSheet("font-weight: bold; color: #475569; padding: 0 4px; font-size: 12px;")
+        self.lbl_zoom.setStyleSheet("font-weight: bold; padding: 0 4px; font-size: 12px;")
 
-        self.btn_close = make_btn("❌ Close", "#94A3B8", "#64748B")
+        self.btn_close = make_btn("Close", "#94A3B8", "#64748B")
         self.btn_close.clicked.connect(self.close)
 
         tb_layout.addWidget(self.btn_print)
@@ -88,7 +86,7 @@ class SalesReceiptWindow(QDialog):
         # 2. Report Document Viewer (QTextBrowser)
         self.browser = QTextBrowser()
         self.browser.setStyleSheet(
-            "QTextBrowser { background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 8px; padding: 8px 14px; }"
+            "QTextBrowser { background-color: #FFFFFF; color: #0F172A; border: 1px solid #CBD5E1; border-radius: 8px; padding: 8px 14px; }"
         )
         self.browser.setOpenExternalLinks(False)
         main_layout.addWidget(self.browser)

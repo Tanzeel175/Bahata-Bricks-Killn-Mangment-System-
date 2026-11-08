@@ -103,12 +103,12 @@ def test_negative_cash_guard_for_munshi():
     # Switch session to Munshi
     current_session.login(2, "munshi", "Munshi Ali", "Munshi")
 
-    # Attempt to disburse Rs. 500,000 cash when cash is nowhere near that
+    init_cash = MoneyTransactionService.get_cash_summary()["net_cash"]
     succ, msg, res = MoneyTransactionService.save_transaction(
         txn_type="PAYMENT",
         txn_date=date(2026, 8, 16),
         account_id="WRK-0001",
-        amount=500000.0,
+        amount=init_cash + 500000.0,
         description="Massive cash payout",
         payment_method="Cash"
     )
@@ -226,3 +226,32 @@ def test_atomic_validation_and_integrity():
     )
     assert succ2 is False
     assert "does not exist" in msg2
+
+
+def test_optional_description_cashbook():
+    """Verify that transaction description / narration is optional."""
+    # 1. Empty string description
+    succ, msg, res = MoneyTransactionService.save_transaction(
+        txn_type="RECEIPT",
+        txn_date=date(2026, 8, 20),
+        account_id="CUST-0001",
+        amount=5000.0,
+        description="",
+        payment_method="Cash"
+    )
+    assert succ is True, f"Failed to save with empty description: {msg}"
+    assert res is not None
+    assert res["Description"] == ""
+
+    # 2. None / omitted description
+    succ2, msg2, res2 = MoneyTransactionService.save_transaction(
+        txn_type="RECEIPT",
+        txn_date=date(2026, 8, 20),
+        account_id="CUST-0001",
+        amount=3000.0,
+        description=None,
+        payment_method="Cash"
+    )
+    assert succ2 is True, f"Failed to save with None description: {msg2}"
+    assert res2 is not None
+    assert res2["Description"] == ""

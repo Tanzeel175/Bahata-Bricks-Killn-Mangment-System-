@@ -66,14 +66,14 @@ class ToastNotification:
     @staticmethod
     def confirm_unsaved_changes(parent: QWidget, form_name: str = "Form") -> str:
         msg_box = QMessageBox(parent)
-        msg_box.setWindowTitle("⚠️ Unsaved Changes Warning")
+        msg_box.setWindowTitle("Unsaved Changes Warning")
         msg_box.setText(f"You have unsaved changes in {form_name}.")
         msg_box.setInformativeText("Would you like to save your changes before leaving?")
         msg_box.setIcon(QMessageBox.Warning)
 
-        btn_save = msg_box.addButton("💾 Save Changes", QMessageBox.AcceptRole)
-        btn_discard = msg_box.addButton("🗑️ Discard Changes", QMessageBox.DestructiveRole)
-        btn_cancel = msg_box.addButton("❌ Cancel", QMessageBox.RejectRole)
+        btn_save = msg_box.addButton("Save Changes", QMessageBox.AcceptRole)
+        btn_discard = msg_box.addButton("Discard Changes", QMessageBox.DestructiveRole)
+        btn_cancel = msg_box.addButton("Cancel", QMessageBox.RejectRole)
 
         msg_box.setDefaultButton(btn_save)
         msg_box.exec()
