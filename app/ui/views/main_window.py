@@ -116,8 +116,8 @@ class SidebarNav(QFrame):
         self.btn_labour_nav = item("Labour Accounts", "LA", self.main_win.open_labour_master_tab)
         self.btn_product_nav = item("Product Master", "PM", self.main_win.open_product_master_tab)
         self.btn_production_nav = item("Daily Production", "PR", self.main_win.open_production_entry_tab)
-        self.btn_sales_nav = item("Sales & Billing", "SB", self.main_win.open_sales_entry_tab)
         self.btn_rate_nav = item("Labour Rates", "LR", self.main_win.open_labour_rate_tab)
+        self.btn_sales_nav = item("Sales & Billing", "SB", self.main_win.open_sales_entry_tab)
         self.btn_central_registers_nav = item("Central Registers", "CR", self.main_win.open_central_registers_tab)
         self.btn_cash_nav = item("Cashbook Journal", "CB", self.main_win.open_money_transactions_tab)
 
@@ -690,13 +690,13 @@ class MainWindow(QMainWindow):
         act_production.triggered.connect(self.open_production_entry_tab)
         menu_modules.addAction(act_production)
 
-        act_sales = QAction("Sales & Billing", self)
-        act_sales.triggered.connect(self.open_sales_entry_tab)
-        menu_modules.addAction(act_sales)
-
         act_rate = QAction("Labour Rates", self)
         act_rate.triggered.connect(self.open_labour_rate_tab)
         menu_modules.addAction(act_rate)
+
+        act_sales = QAction("Sales & Billing", self)
+        act_sales.triggered.connect(self.open_sales_entry_tab)
+        menu_modules.addAction(act_sales)
 
         act_cash = QAction("Cash Transactions (Amdan & Akrajat)", self)
         act_cash.triggered.connect(self.open_money_transactions_tab)

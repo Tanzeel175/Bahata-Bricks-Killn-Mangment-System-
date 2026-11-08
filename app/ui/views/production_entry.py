@@ -132,8 +132,10 @@ class ProductionEntryView(QWidget):
         self.prod_table.horizontalHeader().setMinimumHeight(54)
         self.prod_table.horizontalHeader().setDefaultAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         self.prod_table.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.prod_table.verticalHeader().setDefaultSectionSize(30)
         self.prod_table.setAlternatingRowColors(True)
-        self.prod_table.setMinimumHeight(280)
+        self.prod_table.setMinimumHeight(340)
+        self.prod_table.cellClicked.connect(self._on_table_cell_clicked)
 
         self.is_dirty = False
         self._ignore_signals = False
@@ -405,7 +407,7 @@ class ProductionEntryView(QWidget):
         self.prod_table.setColumnWidth(0, 110)  # ID
         self.prod_table.setColumnWidth(1, 180)  # Name
         for c in range(2, len(headers)):
-            self.prod_table.setColumnWidth(c, 140)
+            self.prod_table.setColumnWidth(c, 160)
 
         self.prod_table.setRowCount(len(accounts))
 
@@ -424,10 +426,16 @@ class ProductionEntryView(QWidget):
                 item_qty = QTableWidgetItem("0")
                 item_qty.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
                 self.prod_table.setItem(row, 2 + c, item_qty)
-            self.prod_table.setRowHeight(row, 40)
+            self.prod_table.setRowHeight(row, 30)
 
         category_label_title = self.cmb_account_type.currentText()
         self.lbl_grid_title.setText(f"Active Labourers ({category_label_title}) & Production Quantities")
+
+    def _on_table_cell_clicked(self, row: int, col: int):
+        """Immediately trigger inline editing on 1 single click for editable product cells only."""
+        item = self.prod_table.item(row, col)
+        if item and bool(item.flags() & Qt.ItemIsEditable):
+            self.prod_table.editItem(item)
 
     def _load_history_entries(self):
         entries = ProductionService.search_production_entries()

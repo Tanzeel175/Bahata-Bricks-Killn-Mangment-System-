@@ -712,10 +712,17 @@ class MoneyTransactionsView(QWidget):
             "Amount (PKR)", "Method", "Description", "Ref", "Actions"
         ])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
-        self.table.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
-        self.table.horizontalHeader().setSectionResizeMode(7, QHeaderView.Stretch)
-        self.table.horizontalHeader().setSectionResizeMode(9, QHeaderView.Fixed)
-        self.table.setColumnWidth(9, 180)
+        self.table.horizontalHeader().setStretchLastSection(False)
+        self.table.setColumnWidth(0, 90)   # Txn #
+        self.table.setColumnWidth(1, 95)   # Date
+        self.table.setColumnWidth(2, 90)   # Type
+        self.table.setColumnWidth(3, 130)  # Category
+        self.table.setColumnWidth(4, 210)  # Account Name (column left to Amount)
+        self.table.setColumnWidth(5, 125)  # Amount (PKR)
+        self.table.setColumnWidth(6, 100)  # Method
+        self.table.setColumnWidth(7, 210)  # Description
+        self.table.setColumnWidth(8, 100)  # Ref
+        self.table.setColumnWidth(9, 175)  # Actions
         self.table.verticalHeader().setVisible(False)
         self.table.verticalHeader().setDefaultSectionSize(40)
         self.table.setAlternatingRowColors(True)

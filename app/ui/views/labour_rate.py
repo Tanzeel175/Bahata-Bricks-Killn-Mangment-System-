@@ -97,8 +97,10 @@ class LabourRateView(QWidget):
         self.rate_table.horizontalHeader().setMinimumHeight(54)
         self.rate_table.horizontalHeader().setDefaultAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         self.rate_table.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.rate_table.verticalHeader().setDefaultSectionSize(30)
         self.rate_table.setAlternatingRowColors(True)
         self.rate_table.setMinimumHeight(340)
+        self.rate_table.cellClicked.connect(self._on_table_cell_clicked)
 
         grid_layout.addWidget(self.rate_table)
         container_layout.addWidget(grid_card)
@@ -269,11 +271,18 @@ class LabourRateView(QWidget):
                 item_rate = QTableWidgetItem(f"{rate_val:,.2f}")
                 item_rate.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
                 self.rate_table.setItem(row, 2 + col, item_rate)
+            self.rate_table.setRowHeight(row, 30)
         self._ignore_signals = False
         self.is_dirty = False
 
         category_label_title = self.cmb_account_type.currentText()
         self.lbl_grid_title.setText(f"Payment Rates per 1,000 Units ({category_label_title})")
+
+    def _on_table_cell_clicked(self, row: int, col: int):
+        """Immediately trigger inline editing on 1 single click for editable rate cells only."""
+        item = self.rate_table.item(row, col)
+        if item and bool(item.flags() & Qt.ItemIsEditable):
+            self.rate_table.editItem(item)
 
     def _on_save_all_rates_clicked(self):
         saved_count = 0
