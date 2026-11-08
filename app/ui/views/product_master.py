@@ -9,6 +9,7 @@ from app.services.product_service import ProductService
 from app.security.session import current_session
 from app.ui.components.toast import ToastNotification
 from app.ui.components.formatted_inputs import NumericLineEdit
+from app.ui.theme_manager import theme_mgr
 
 
 class ProductMasterView(QWidget):
@@ -26,6 +27,7 @@ class ProductMasterView(QWidget):
         self.category_checkboxes = {}
 
         self._init_ui()
+        theme_mgr.theme_changed.connect(self._on_theme_changed)
         self.refresh_data()
 
     def _init_ui(self):
@@ -68,8 +70,11 @@ class ProductMasterView(QWidget):
 
         def make_field_heading(text, required=False):
             lbl = QLabel(text)
+            lbl.setProperty("class", "form-field-label")
+            is_d = theme_mgr.is_dark_mode()
+            lbl_col = "#FFFFFF" if is_d else "#334155"
             lbl.setStyleSheet(
-                f"font-weight: {'700' if required else '600'}; "
+                f"font-weight: {'700' if required else '600'}; color: {lbl_col}; "
                 "font-size: 11px; border: none; background: transparent; margin: 0px; padding: 0px;"
             )
             return lbl
@@ -222,7 +227,8 @@ class ProductMasterView(QWidget):
         filter_bar.setSpacing(12)
 
         lbl_cat_flt = QLabel("Category Filter:")
-        lbl_cat_flt.setStyleSheet("font-weight: 700; color: #334155; font-size: 12px; border: none; background: transparent;")
+        lbl_cat_flt.setProperty("class", "form-field-label")
+        lbl_cat_flt.setStyleSheet("font-weight: 700; font-size: 12px; border: none; background: transparent;")
         self.cmb_filter_category = QComboBox()
         self.cmb_filter_category.setMinimumHeight(32)
         self.cmb_filter_category.currentIndexChanged.connect(self._on_filter_changed)
@@ -277,6 +283,14 @@ class ProductMasterView(QWidget):
 
         # Enforce RBAC permissions
         self._update_permission_states()
+        self._on_theme_changed()
+
+    def _on_theme_changed(self, _theme: str = ""):
+        is_dark = theme_mgr.is_dark_mode()
+        lbl_col = "#FFFFFF" if is_dark else "#334155"
+        for lbl in self.findChildren(QLabel):
+            if lbl.property("class") == "form-field-label":
+                lbl.setStyleSheet(f"font-weight: 700; color: {lbl_col}; font-size: 11px; border: none; background: transparent; margin: 0px; padding: 0px;")
 
     def _recalculate_stock_value(self):
         try:

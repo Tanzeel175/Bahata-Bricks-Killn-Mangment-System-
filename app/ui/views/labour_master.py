@@ -131,6 +131,7 @@ class LabourMasterView(QWidget):
         fh_layout.addStretch()
 
         fh_note = QLabel('Fields marked with <font color="#E11D48"><b>*</b></font> are mandatory')
+        fh_note.setProperty("class", "form-field-subtext")
         fh_note.setStyleSheet("font-size: 11px; color: #64748B; font-weight: 500;")
         fh_layout.addWidget(fh_note)
 
@@ -147,9 +148,12 @@ class LabourMasterView(QWidget):
             box.setContentsMargins(0, 0, 0, 0)
             box.setSpacing(4)
             lbl = QLabel(text)
+            lbl.setProperty("class", "form-field-label")
+            is_d = theme_mgr.is_dark_mode()
+            lbl_col = "#FFFFFF" if is_d else "#334155"
             lbl.setStyleSheet(
                 f"font-weight: {'700' if required else '600'}; "
-                "font-size: 11.5px; color: #334155; border: none; background: transparent; margin: 0px;"
+                f"font-size: 11.5px; color: {lbl_col}; border: none; background: transparent; margin: 0px;"
             )
             box.addWidget(lbl)
             if required:
@@ -159,7 +163,9 @@ class LabourMasterView(QWidget):
             if subtext:
                 box.addStretch()
                 sub_lbl = QLabel(subtext)
-                sub_lbl.setStyleSheet("font-size: 10.5px; color: #94A3B8; font-weight: 500;")
+                sub_lbl.setProperty("class", "form-field-subtext")
+                sub_col = "#CBD5E1" if is_d else "#64748B"
+                sub_lbl.setStyleSheet(f"font-size: 10.5px; color: {sub_col}; font-weight: 500; border: none; background: transparent;")
                 box.addWidget(sub_lbl)
             else:
                 box.addStretch()
@@ -405,13 +411,15 @@ class LabourMasterView(QWidget):
         filter_bar.setSpacing(12)
 
         lbl_cat_flt = QLabel("Account Category Filter:")
-        lbl_cat_flt.setStyleSheet("font-weight: 700; font-size: 11.5px; color: #475569;")
+        lbl_cat_flt.setProperty("class", "form-field-label")
+        lbl_cat_flt.setStyleSheet("font-weight: 700; font-size: 11.5px;")
         self.cmb_filter_type = QComboBox()
         self.cmb_filter_type.setMinimumHeight(32)
         self.cmb_filter_type.currentIndexChanged.connect(self._on_filter_changed)
 
         lbl_sts_flt = QLabel("Account Status Filter:")
-        lbl_sts_flt.setStyleSheet("font-weight: 700; font-size: 11.5px; color: #475569;")
+        lbl_sts_flt.setProperty("class", "form-field-label")
+        lbl_sts_flt.setStyleSheet("font-weight: 700; font-size: 11.5px;")
         self.cmb_filter_status = QComboBox()
         self.cmb_filter_status.setMinimumHeight(32)
         self.cmb_filter_status.addItems(["Active Accounts Only", "All Accounts (Active & Omitted)", "Omitted Accounts Only"])
@@ -481,6 +489,7 @@ class LabourMasterView(QWidget):
 
         # Enforce RBAC permissions
         self._update_permission_states()
+        self._on_theme_changed()
 
     def _update_permission_states(self):
         if not current_session.is_admin:
@@ -932,7 +941,7 @@ class LabourMasterView(QWidget):
 
         # 3. Omit Card Checkbox & Labels
         if hasattr(self, "chk_omit_status"):
-            chk_color = "#FDE047" if is_dark else "#854D0E"
+            chk_color = "#FFFFFF" if is_dark else "#854D0E"
             chk_ind_bg = "#0F172A" if is_dark else "#FFFFFF"
             self.chk_omit_status.setStyleSheet(
                 f"QCheckBox {{ font-weight: 700; color: {chk_color}; font-size: 11.5px; border: none; background: transparent; }} "
@@ -941,9 +950,19 @@ class LabourMasterView(QWidget):
             )
 
         if hasattr(self, "lbl_reason_title"):
-            rt_col = "#FDE047" if is_dark else "#713F12"
-            self.lbl_reason_title.setStyleSheet(f"font-size: 10.5px; font-weight: 600; color: {rt_col}; border: none; background: transparent; margin-top: 2px;")
+            rt_col = "#FFFFFF" if is_dark else "#713F12"
+            self.lbl_reason_title.setStyleSheet(f"font-size: 10.5px; font-weight: 700; color: {rt_col}; border: none; background: transparent; margin-top: 2px;")
 
         if hasattr(self, "lbl_omit_date"):
-            od_col = "#FCD34D" if is_dark else "#854D0E"
+            od_col = "#F1F5F9" if is_dark else "#854D0E"
             self.lbl_omit_date.setStyleSheet(f"font-size: 10px; color: {od_col}; font-weight: 600; border: none; background: transparent; margin-top: 2px;")
+
+        # 4. Form Field Headings & Subtexts
+        lbl_col = "#FFFFFF" if is_dark else "#334155"
+        sub_col = "#CBD5E1" if is_dark else "#64748B"
+        for lbl in self.findChildren(QLabel):
+            cls = lbl.property("class")
+            if cls == "form-field-label":
+                lbl.setStyleSheet(f"font-size: 11.5px; font-weight: 700; color: {lbl_col}; border: none; background: transparent; margin: 0px;")
+            elif cls == "form-field-subtext":
+                lbl.setStyleSheet(f"font-size: 10.5px; font-weight: 500; color: {sub_col}; border: none; background: transparent;")

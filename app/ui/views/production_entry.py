@@ -12,6 +12,7 @@ from app.services.product_service import ProductService
 from app.security.session import current_session
 from app.ui.components.toast import ToastNotification
 from app.ui.styles import configure_date_edit
+from app.ui.theme_manager import theme_mgr
 
 
 class ProductionEntryView(QWidget):
@@ -32,6 +33,7 @@ class ProductionEntryView(QWidget):
         self.current_category_workers = []
 
         self._init_ui()
+        theme_mgr.theme_changed.connect(self._on_theme_changed)
         self.refresh_data()
 
     def _init_ui(self):
@@ -75,8 +77,11 @@ class ProductionEntryView(QWidget):
 
         def make_field_heading(text, required=False):
             lbl = QLabel(text)
+            lbl.setProperty("class", "form-field-label")
+            is_d = theme_mgr.is_dark_mode()
+            lbl_col = "#FFFFFF" if is_d else "#334155"
             lbl.setStyleSheet(
-                f"font-weight: {'700' if required else '600'}; "
+                f"font-weight: {'700' if required else '600'}; color: {lbl_col}; "
                 "font-size: 11px; border: none; background: transparent; margin: 0px; padding: 0px;"
             )
             return lbl
@@ -242,6 +247,14 @@ class ProductionEntryView(QWidget):
 
         # Enforce RBAC permissions
         self._update_permission_states()
+        self._on_theme_changed()
+
+    def _on_theme_changed(self, _theme: str = ""):
+        is_dark = theme_mgr.is_dark_mode()
+        lbl_col = "#FFFFFF" if is_dark else "#334155"
+        for lbl in self.findChildren(QLabel):
+            if lbl.property("class") == "form-field-label":
+                lbl.setStyleSheet(f"font-weight: 700; color: {lbl_col}; font-size: 11px; border: none; background: transparent; margin: 0px; padding: 0px;")
 
     def _update_permission_states(self):
         if not current_session.is_admin:
