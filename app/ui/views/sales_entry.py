@@ -270,6 +270,7 @@ class SalesEntryView(QWidget):
         self.items_table.setAlternatingRowColors(True)
         self.items_table.setSelectionBehavior(QTableWidget.SelectRows)
         self.items_table.setSelectionMode(QTableWidget.SingleSelection)
+        self.items_table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.items_table.setAutoScroll(False)
         self.items_table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.items_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)

@@ -129,6 +129,12 @@ QLabel.subtext, QLabel[class="subtext"], QLabel#subtext, QLabel#viewSubtitle {
     color: #64748B;
 }
 
+QLabel.form-field-label, QLabel[class="form-field-label"] {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #334155;
+}
+
 /* Office UI Primitives - Light Theme */
 QFrame#officeMetricCard, QFrame[role="metric-card"] {
     background-color: #FFFFFF;
@@ -412,8 +418,8 @@ QTableWidget, QTableView {
     gridline-color: #F1F5F9;
     font-size: 13px;
     color: #0F172A;
-    selection-background-color: #DBEAFE;
-    selection-color: #1E3A8A;
+    selection-background-color: #E2E8F0;
+    selection-color: #0F172A;
     outline: none;
 }
 
@@ -427,9 +433,20 @@ QTableWidget::item:alternate, QTableView::item:alternate {
     background-color: #F8FAFC;
 }
 
+QTableWidget::item:hover, QTableView::item:hover {
+    background-color: #F1F5F9;
+    color: #0F172A;
+}
+
 QTableWidget::item:selected, QTableView::item:selected {
-    background-color: #DBEAFE;
-    color: #1E3A8A;
+    background-color: #E2E8F0;
+    color: #0F172A;
+    font-weight: 600;
+}
+
+QTableWidget::item:selected:hover, QTableView::item:selected:hover {
+    background-color: #CBD5E1;
+    color: #0F172A;
 }
 
 QHeaderView::section {

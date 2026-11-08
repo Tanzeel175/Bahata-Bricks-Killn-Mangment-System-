@@ -464,6 +464,7 @@ class LabourMasterView(QWidget):
 
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.setSelectionMode(QTableWidget.SingleSelection)
+        self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setAlternatingRowColors(True)
         self.table.setAutoScroll(False)
         self.table.setVerticalScrollMode(QTableWidget.ScrollPerPixel)
@@ -536,7 +537,8 @@ class LabourMasterView(QWidget):
             # 1: Worker ID
             wid_item = QTableWidgetItem(a.get("WorkerID", ""))
             wid_item.setFont(mono_font)
-            wid_item.setForeground(QColor("#2563EB"))
+            is_dark_table = theme_mgr.is_dark_mode()
+            wid_item.setForeground(QColor("#F8FAFC" if is_dark_table else "#0F172A"))
             wid_item.setData(Qt.UserRole, a)
             self.table.setItem(row, 1, wid_item)
 
@@ -902,12 +904,19 @@ class LabourMasterView(QWidget):
             )
 
         if hasattr(self, "txt_worker_id"):
-            wid_bg = "#0F172A" if is_dark else "#EFF6FF"
-            wid_fg = "#93C5FD" if is_dark else "#1E3A8A"
-            wid_border = "#334155" if is_dark else "#BFDBFE"
+            wid_bg = "#0F172A" if is_dark else "#F8FAFC"
+            wid_fg = "#F8FAFC" if is_dark else "#0F172A"
+            wid_border = "#334155" if is_dark else "#CBD5E1"
             self.txt_worker_id.setStyleSheet(
                 f"QLineEdit {{ border-radius: 0px; font-weight: 800; color: {wid_fg}; background-color: {wid_bg}; border: 1.5px solid {wid_border}; }}"
             )
+
+        if hasattr(self, "table"):
+            id_col = QColor("#F8FAFC" if is_dark else "#0F172A")
+            for r in range(self.table.rowCount()):
+                it = self.table.item(r, 1)
+                if it:
+                    it.setForeground(id_col)
 
         if hasattr(self, "btn_edit_id"):
             btn_bg = "#0F172A" if is_dark else "#F1F5F9"

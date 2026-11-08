@@ -1,14 +1,34 @@
 from datetime import datetime
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton,
-    QCheckBox, QFrame, QGraphicsDropShadowEffect, QApplication
+    QCheckBox, QFrame, QGraphicsDropShadowEffect, QApplication,
+    QStyleOption, QStyle
 )
-from PySide6.QtGui import QColor, QFont, QIcon, QPixmap
+from PySide6.QtGui import QColor, QFont, QIcon, QPixmap, QPainter, QPalette
 from PySide6.QtCore import Qt, QTimer, Signal
 from app.config import APP_NAME, APP_SUBTITLE, COMPANY_NAME, APP_VERSION
 from app.services.auth_service import AuthService
 from app.ui.components.toast import ToastNotification
 from app.ui.theme_manager import theme_mgr
+
+
+class LoginContainer(QFrame):
+    """
+    Dedicated container that guarantees solid, 100% opaque background rendering
+    even on frameless windows with WA_TranslucentBackground.
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        self.setAutoFillBackground(True)
+
+    def paintEvent(self, event):
+        opt = QStyleOption()
+        opt.initFrom(self)
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        self.style().drawPrimitive(QStyle.PE_Widget, opt, p, self)
+        super().paintEvent(event)
 
 
 class LoginWindow(QDialog):
@@ -32,7 +52,7 @@ class LoginWindow(QDialog):
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(10, 10, 10, 10)
 
-        self.container = QFrame(self)
+        self.container = LoginContainer(self)
         self.container.setObjectName("MainContainer")
 
         shadow = QGraphicsDropShadowEffect(self)
@@ -191,6 +211,9 @@ class LoginWindow(QDialog):
         self.container.setStyleSheet(
             f"QFrame#MainContainer {{ background-color: {bg_col}; border: 1px solid {border_col}; border-radius: 12px; }}"
         )
+        pal = self.container.palette()
+        pal.setColor(QPalette.Window, QColor(bg_col))
+        self.container.setPalette(pal)
 
         title_col = "#FFFFFF" if is_dark else "#0F172A"
         sub_col = "#E2E8F0" if is_dark else "#64748B"

@@ -263,6 +263,7 @@ class ProductMasterView(QWidget):
 
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.setSelectionMode(QTableWidget.SingleSelection)
+        self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setAlternatingRowColors(True)
         self.table.setMinimumHeight(240)
         self.table.itemDoubleClicked.connect(self._on_row_double_clicked)

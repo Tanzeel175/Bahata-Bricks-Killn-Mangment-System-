@@ -191,6 +191,7 @@ class LoginHistoryDialog(QDialog):
         self.table.setColumnCount(5)
         self.table.setHorizontalHeaderLabels(["Log ID", "Username", "Action", "Details", "Timestamp"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setAlternatingRowColors(True)
 
         layout.addWidget(self.table)
@@ -289,6 +290,7 @@ class UserManagementView(QWidget):
         self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.setSelectionMode(QTableWidget.SingleSelection)
+        self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setAlternatingRowColors(True)
 
         layout.addWidget(self.table)

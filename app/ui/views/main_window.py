@@ -385,6 +385,7 @@ class DashboardWidget(QWidget):
         self.cat_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
         self.cat_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
         self.cat_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
+        self.cat_table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.cat_table.setAlternatingRowColors(True)
         self.cat_table.setMinimumHeight(280)
 
@@ -471,6 +472,7 @@ class DashboardWidget(QWidget):
         self.audit_table.setHorizontalHeaderLabels(["User", "Action", "Details", "Timestamp"])
         self.audit_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.audit_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
+        self.audit_table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.audit_table.setAlternatingRowColors(True)
         self.audit_table.setMinimumHeight(180)
 
@@ -683,6 +685,18 @@ class MainWindow(QMainWindow):
         act_product = QAction("Product Master", self)
         act_product.triggered.connect(self.open_product_master_tab)
         menu_modules.addAction(act_product)
+
+        act_production = QAction("Daily Production Entry", self)
+        act_production.triggered.connect(self.open_production_entry_tab)
+        menu_modules.addAction(act_production)
+
+        act_sales = QAction("Sales & Billing", self)
+        act_sales.triggered.connect(self.open_sales_entry_tab)
+        menu_modules.addAction(act_sales)
+
+        act_rate = QAction("Labour Rates", self)
+        act_rate.triggered.connect(self.open_labour_rate_tab)
+        menu_modules.addAction(act_rate)
 
         act_cash = QAction("Cash Transactions (Amdan & Akrajat)", self)
         act_cash.triggered.connect(self.open_money_transactions_tab)

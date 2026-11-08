@@ -226,6 +226,7 @@ class ProductionEntryView(QWidget):
 
         self.history_table.setSelectionBehavior(QTableWidget.SelectRows)
         self.history_table.setSelectionMode(QTableWidget.SingleSelection)
+        self.history_table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.history_table.setAlternatingRowColors(True)
         self.history_table.setMinimumHeight(180)
         self.history_table.itemDoubleClicked.connect(self._on_history_row_double_clicked)

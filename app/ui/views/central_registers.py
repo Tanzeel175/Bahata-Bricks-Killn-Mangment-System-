@@ -336,6 +336,7 @@ class CentralRegistersView(QWidget):
 
         # 6. Main High-Performance Data Table
         self.table = QTableWidget()
+        self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.table.setAlternatingRowColors(True)
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setWordWrap(False)
