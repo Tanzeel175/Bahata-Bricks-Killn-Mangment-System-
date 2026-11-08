@@ -67,6 +67,33 @@ QMainWindow, QDialog {
     color: #0F172A;
 }
 
+QMessageBox {
+    background-color: #FFFFFF;
+    color: #0F172A;
+}
+
+QMessageBox QLabel {
+    background-color: transparent;
+    color: #0F172A;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+QMessageBox QPushButton {
+    background-color: #2563EB;
+    color: #FFFFFF;
+    font-size: 12.5px;
+    font-weight: 700;
+    border-radius: 6px;
+    padding: 6px 20px;
+    min-width: 70px;
+    border: none;
+}
+
+QMessageBox QPushButton:hover {
+    background-color: #1D4ED8;
+}
+
 QWidget#MainContainer, QFrame#MainContainer {
     background-color: #FFFFFF;
     border: 1px solid #E2E8F0;
@@ -648,6 +675,33 @@ QWidget {
 QMainWindow, QDialog {
     background-color: #0F172A;
     color: #F8FAFC;
+}
+
+QMessageBox {
+    background-color: #1E293B;
+    color: #F8FAFC;
+}
+
+QMessageBox QLabel {
+    background-color: transparent;
+    color: #F8FAFC;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+QMessageBox QPushButton {
+    background-color: #2563EB;
+    color: #FFFFFF;
+    font-size: 12.5px;
+    font-weight: 700;
+    border-radius: 6px;
+    padding: 6px 20px;
+    min-width: 70px;
+    border: none;
+}
+
+QMessageBox QPushButton:hover {
+    background-color: #1D4ED8;
 }
 
 QWidget#MainContainer, QFrame#MainContainer {

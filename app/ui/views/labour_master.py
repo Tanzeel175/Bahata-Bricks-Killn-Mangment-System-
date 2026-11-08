@@ -13,7 +13,7 @@ from app.security.session import current_session
 from app.ui.components.toast import ToastNotification
 from app.ui.components.formatted_inputs import CNICLineEdit, PhoneLineEdit, NumericLineEdit
 from app.ui.views.account_type_dialog import AccountTypeManagementDialog
-from app.ui.theme_manager import theme_mgr
+from app.ui.theme_manager import theme_mgr, _CHECK_SVG_PATH
 
 
 class LabourMasterView(QWidget):
@@ -937,7 +937,7 @@ class LabourMasterView(QWidget):
             self.chk_omit_status.setStyleSheet(
                 f"QCheckBox {{ font-weight: 700; color: {chk_color}; font-size: 11.5px; border: none; background: transparent; }} "
                 f"QCheckBox::indicator {{ width: 16px; height: 16px; border: 1.5px solid #CA8A04; border-radius: 4px; background-color: {chk_ind_bg}; }} "
-                f"QCheckBox::indicator:checked {{ background-color: #CA8A04; border-color: #A16207; }}"
+                f"QCheckBox::indicator:checked {{ background-color: #CA8A04; border-color: #A16207; image: url(\"{_CHECK_SVG_PATH}\"); }}"
             )
 
         if hasattr(self, "lbl_reason_title"):

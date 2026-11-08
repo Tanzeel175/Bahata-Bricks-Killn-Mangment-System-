@@ -1142,8 +1142,8 @@ class MoneyTransactionsView(QWidget):
 
         # 9. Overdraw Checkbox
         if hasattr(self, "chk_negative_cash"):
-            chk_col = "#94A3B8" if is_dark else "#64748B"
-            self.chk_negative_cash.setStyleSheet(f"font-size: 11.5px; font-weight: 600; color: {chk_col};")
+            chk_col = "#F8FAFC" if is_dark else "#334155"
+            self.chk_negative_cash.setStyleSheet(f"font-size: 11.5px; font-weight: 700; color: {chk_col};")
 
         # 10. Update Save Button
         if hasattr(self, "btn_save"):

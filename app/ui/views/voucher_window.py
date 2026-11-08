@@ -10,6 +10,7 @@ from PySide6.QtPrintSupport import QPrinter, QPrintDialog
 
 from app.config import COMPANY_NAME, APP_SUBTITLE
 from app.ui.components.toast import ToastNotification
+from app.ui.theme_manager import theme_mgr
 
 
 class VoucherWindow(QDialog):
@@ -28,7 +29,11 @@ class VoucherWindow(QDialog):
         self.setWindowTitle(f"{t_title} — {t_no}")
         self.resize(850, 720)
         self.setMinimumSize(700, 550)
-        self.setStyleSheet("QDialog { background-color: #F8FAFC; }")
+        self.setObjectName("VoucherWindow")
+
+        is_dark = theme_mgr.is_dark_mode()
+        bg_col = "#0F172A" if is_dark else "#F8FAFC"
+        self.setStyleSheet(f"QDialog#VoucherWindow {{ background-color: {bg_col}; }}")
 
         self.zoom_level = 100
         self._init_ui()

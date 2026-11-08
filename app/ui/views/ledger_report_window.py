@@ -9,6 +9,7 @@ from PySide6.QtGui import QTextDocument, QPageSize, QPageLayout, QFont
 from PySide6.QtPrintSupport import QPrinter, QPrintDialog, QPrintPreviewDialog
 
 from app.ui.components.toast import ToastNotification
+from app.ui.theme_manager import theme_mgr
 
 
 class LedgerReportWindow(QDialog):
@@ -31,7 +32,11 @@ class LedgerReportWindow(QDialog):
         self.setWindowTitle(f"Labour Ledger Report — {w_name} ({w_id})")
         self.resize(1040, 850)
         self.setMinimumSize(880, 600)
-        self.setStyleSheet("QDialog { background-color: #F8FAFC; }")
+        self.setObjectName("LedgerReportWindow")
+
+        is_dark = theme_mgr.is_dark_mode()
+        bg_col = "#0F172A" if is_dark else "#F8FAFC"
+        self.setStyleSheet(f"QDialog#LedgerReportWindow {{ background-color: {bg_col}; }}")
 
         self.zoom_level = 100
         self._init_ui()
@@ -447,7 +452,11 @@ class TabularSummaryReportWindow(QDialog):
         self.setWindowTitle(f"{title} — Printable A4 Report")
         self.resize(1100, 850)
         self.setMinimumSize(900, 600)
-        self.setStyleSheet("QDialog { background-color: #F8FAFC; }")
+        self.setObjectName("CashbookReportDialog")
+
+        is_dark = theme_mgr.is_dark_mode()
+        bg_col = "#0F172A" if is_dark else "#F8FAFC"
+        self.setStyleSheet(f"QDialog#CashbookReportDialog {{ background-color: {bg_col}; }}")
 
         self.zoom_level = 100
         self._init_ui()
